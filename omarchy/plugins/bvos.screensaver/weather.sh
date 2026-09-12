@@ -35,6 +35,8 @@ jq -ce --arg unit "$unit" --arg place "$place" --argjson forecast "$forecast" '
   | .weather[0].astronomy[0] as $sky
   | {
       place: (if $place != "" then $place else (.nearest_area[0].areaName[0].value // "") end),
+      lat: (.nearest_area[0].latitude | tonumber),
+      lon: (.nearest_area[0].longitude | tonumber),
       unit: $unit,
       temp: $now["temp_" + $unit],
       feels: $now["FeelsLike" + $unit],
@@ -43,6 +45,8 @@ jq -ce --arg unit "$unit" --arg place "$place" --argjson forecast "$forecast" '
       cloudcover: ($now.cloudcover | tonumber),
       precipMM: ($now.precipMM | tonumber),
       visibility: ($now.visibility | tonumber),
+      windKmph: ($now.windspeedKmph | tonumber),
+      windDegree: ($now.winddirDegree | tonumber),
       sunrise: ($sky.sunrise | minutes),
       sunset: ($sky.sunset | minutes),
       moonrise: ($sky.moonrise | minutes),

@@ -23,5 +23,19 @@ hyprbars/hyprbars-button-align.patch
 Fonts (downloaded at install time, not included): Geist, Manrope and Inter,
   from Google Fonts, under the SIL Open Font License 1.1.
 
+omarchy/plugins/bvos.screensaver/SGP4.js
+  satellite.js v5.0.0, Copyright (C) 2013 Shashwat Kandadai and UCSC Jack Baskin
+  School of Engineering, MIT License (see LICENSE.satellite-js next to it).
+
+omarchy/plugins/bvos.screensaver/stars.json
+  Derived from the Yale Bright Star Catalogue, 5th Revised Edition
+  (Hoffleit & Warren, 1991; NASA/CDS catalog V/50), public domain.
+
+omarchy/plugins/bvos.screensaver/constellations.json
+  Constellation lines from d3-celestial, Copyright (c) 2015 Olaf Frohn,
+  BSD 3-Clause License (see LICENSE.d3-celestial next to it).
+
+Satellite orbital elements (fetched at runtime): CelesTrak (https://celestrak.org).
+
 Weather data (fetched at runtime): wttr.in and Open-Meteo (https://open-meteo.com,
   CC BY 4.0 data).

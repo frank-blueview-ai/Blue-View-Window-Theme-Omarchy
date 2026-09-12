@@ -4,8 +4,10 @@
 import QtQuick
 import QtQuick.Effects
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
+import "Astro.js" as Astro
 
 // Blue View OS screensaver: an animated sea of clouds with the Blue View OS
 // wordmark and clock. Starts after `idle.screensaver` seconds (shell.json),
@@ -15,6 +17,12 @@ import Quickshell.Wayland
 //
 // The sky follows the real day and the weather outside: the logo's yellow
 // oval is the sun, its blue oval the moon, and the clouds match conditions.
+//
+// The same live sky is the desktop background, so the desktop is dark when
+// it's dark outside and clouds drift behind your windows. Toggle it with:
+//   omarchy-shell bvos-screensaver desktop <on|off>
+// Constellation lines (off by default, for a real-looking sky):
+//   omarchy-shell bvos-screensaver lines <on|off>
 //
 // Try it: omarchy-shell bvos-screensaver show
 // Preview: omarchy-shell bvos-screensaver <preview|demo>  <clear|partly|cloudy|overcast|rain|storm|snow|fog|live> <hour 0-23|now>
@@ -32,6 +40,39 @@ Item {
   readonly property int framesPerSecond: 30
 
   property int timeoutSeconds: 150
+
+  // ---- Live desktop.
+  readonly property string desktopOffFlag: home + "/.local/state/bvos/live-desktop-off"
+  property bool desktopEnabled: false
+  readonly property int desktopFramesPerSecond: 12
+
+  // ---- One real-time timeline for the sky, shared by desktop and screensaver.
+  property real time: Math.random() * 600
+  property real lastTick: Date.now()
+
+  // ---- Real physics. See Astro.js for the viewpoint and formulas.
+  readonly property bool located: weather !== null && weather.lat !== undefined && weather.lon !== undefined
+  readonly property real latitude: located ? weather.lat : 0
+  readonly property real longitude: located ? weather.lon : 0
+  readonly property real windKmph: previewCondition === "storm" ? 45 : (weather && weather.windKmph !== undefined ? weather.windKmph : 10)
+  readonly property real windDegree: weather && weather.windDegree !== undefined ? weather.windDegree : 270
+  // Cloud travel from the real wind at cloud height, seen from 1 km above the cloud tops.
+  readonly property var cloudVelocity: Astro.cloudVelocities(windKmph, windDegree, latitude)
+  property vector3d layerShiftX: Qt.vector3d(0, 0, 0)
+  property vector3d layerShiftY: Qt.vector3d(0, 0, 0)
+  property vector2d highShift: Qt.vector2d(0, 0)
+  property int skyRevision: 0
+  // Constellation figures are a chart convention, not part of the real sky: off unless asked for.
+  property bool constellationLines: false
+  property real moonFraction: 0.5
+  property bool moonWaxing: true
+  readonly property real sunAltitudeDeg: Math.asin(Math.max(-1, Math.min(1, sunArc.alt))) * 180 / Math.PI
+  readonly property real moonAltitudeDeg: Math.asin(Math.max(-1, Math.min(1, moonArc.alt))) * 180 / Math.PI
+  // Faintest star the eye could see right now, given twilight, moonlight and weather.
+  readonly property real limitingMagnitude: Astro.limitingMagnitude(sunAltitudeDeg, moonAltitudeDeg, moonFraction, skyGloom)
+  readonly property bool desktopUncovered: desktopEnabled && Hyprland.monitors.values.some(function(m) {
+    return !m.activeWorkspace || m.activeWorkspace.toplevels.values.length === 0
+  })
   property bool active: false
   property bool closing: false
   // Still mode renders the bare sky at full resolution (for wallpapers) and
@@ -40,7 +81,6 @@ Item {
   // Demo mode shows everything but ignores input until hidden over IPC.
   property bool demoMode: false
   property real startedAt: 0
-  property real time: 0
   property var weather: null
 
   // ---- Sky state: time of day and weather, eased so changes glide.
@@ -49,11 +89,41 @@ Item {
   property real clockMinutes: minutesNow()
   readonly property real nowMinutes: previewHour >= 0 ? previewHour * 60 : clockMinutes
 
-  readonly property var sunArc: bodyArc(weather && weather.sunrise !== null ? weather.sunrise : 390,
-                                        weather && weather.sunset !== null ? weather.sunset : 1140, nowMinutes)
-  readonly property var moonArc: weather && weather.moonrise !== null && weather.moonset !== null
-    ? bodyArc(weather.moonrise, weather.moonset, nowMinutes)
-    : bodyArc((weather && weather.sunset !== null ? weather.sunset : 1140) + 40, (weather && weather.sunrise !== null ? weather.sunrise : 390) - 40, nowMinutes)
+  property var sunArc: ({ x: 0, y: 0.7, alt: 0.5 })
+  property var moonArc: ({ x: 0, y: -0.2, alt: -1 })
+
+  // The moment the sky shows: now, or today at the preview hour.
+  function skyDate() {
+    var d = new Date()
+    if (root.previewHour >= 0) {
+      d.setHours(0, 0, 0, 0)
+      d.setTime(d.getTime() + root.previewHour * 3600000)
+    }
+    return d
+  }
+
+  // Real sun and moon positions, phase and sidereal rotation for the location.
+  function updateSky() {
+    var date = root.skyDate()
+    if (root.located) {
+      root.sunArc = Astro.project(Astro.sunPosition(date, root.latitude, root.longitude), root.latitude)
+      root.moonArc = Astro.project(Astro.moonPosition(date, root.latitude, root.longitude), root.latitude)
+    } else {
+      // No location yet: approximate with typical rise and set times.
+      var minutes = date.getHours() * 60 + date.getMinutes()
+      var sun = bodyArc(390, 1140, minutes)
+      var moon = bodyArc(1180, 350, minutes)
+      root.sunArc = { x: (sun.x - 0.5) * 1.778, y: sun.y, alt: sun.alt }
+      root.moonArc = { x: (moon.x - 0.5) * 1.778, y: moon.y, alt: moon.alt }
+    }
+    var illumination = Astro.moonIllumination(date)
+    root.moonFraction = illumination.fraction
+    root.moonWaxing = illumination.waxing
+    root.skyRevision++
+  }
+
+  onWeatherChanged: updateSky()
+  onPreviewHourChanged: updateSky()
   readonly property var conditions: conditionsFor(previewCondition !== "" ? previewCode(previewCondition) : (weather ? weather.code : 116),
                                                   previewCondition !== "" ? -1 : (weather ? weather.cloudcover : 30))
 
@@ -164,7 +234,6 @@ Item {
     if (root.active) return
     root.closing = false
     root.startedAt = Date.now()
-    root.time = Math.random() * 400
     root.clockMinutes = root.minutesNow()
     root.active = true
     root.refreshWeather()
@@ -233,17 +302,18 @@ Item {
   Component.onCompleted: weatherProc.running = true
 
   Timer {
-    running: root.active
+    running: root.active || root.desktopEnabled
     repeat: true
     interval: 5 * 60 * 1000
     onTriggered: root.refreshWeather()
   }
 
   Timer {
-    running: root.active
+    running: root.active || root.desktopEnabled
     repeat: true
-    interval: 20000
-    onTriggered: root.clockMinutes = root.minutesNow()
+    interval: 5000
+    triggeredOnStart: true
+    onTriggered: { root.clockMinutes = root.minutesNow(); root.updateSky() }
   }
 
   Timer {
@@ -252,15 +322,79 @@ Item {
     onTriggered: { root.active = false; root.closing = false }
   }
 
+  // Advances the sky in real time: smooth frames while it's on screen, and an
+  // occasional real-time step while windows cover the desktop.
   Timer {
-    running: root.active
+    running: root.active || root.desktopEnabled
     repeat: true
-    interval: Math.round(1000 / root.framesPerSecond)
-    onTriggered: root.time += interval / 1000
+    interval: root.active ? Math.round(1000 / root.framesPerSecond)
+      : root.desktopUncovered ? Math.round(1000 / root.desktopFramesPerSecond) : 2000
+    onTriggered: {
+      var now = Date.now()
+      var dt = Math.min(5, Math.max(0, (now - root.lastTick) / 1000))
+      root.lastTick = now
+      root.time += dt
+      var v = root.cloudVelocity
+      root.layerShiftX = Qt.vector3d(root.layerShiftX.x + dt * v.layers[0].x, root.layerShiftX.y + dt * v.layers[1].x, root.layerShiftX.z + dt * v.layers[2].x)
+      root.layerShiftY = Qt.vector3d(root.layerShiftY.x + dt * v.layers[0].y, root.layerShiftY.y + dt * v.layers[1].y, root.layerShiftY.z + dt * v.layers[2].y)
+      root.highShift = Qt.vector2d(root.highShift.x + dt * v.high.x, root.highShift.y + dt * v.high.y)
+
+      // Keep shader inputs small enough for float precision; rebase only while hidden.
+      var hidden = !root.active && !root.desktopUncovered
+      if ((hidden && root.time > 2400) || root.time > 7200) root.time -= 1800
+      var travel = Math.max(Math.abs(root.layerShiftX.z), Math.abs(root.layerShiftY.z), Math.abs(root.highShift.x))
+      if ((hidden && travel > 40) || travel > 400) {
+        root.layerShiftX = Qt.vector3d(0, 0, 0)
+        root.layerShiftY = Qt.vector3d(0, 0, 0)
+        root.highShift = Qt.vector2d(0, 0)
+      }
+    }
+  }
+
+  Process {
+    id: desktopFlagProbe
+    running: true
+    command: ["bash", "-c", "[[ -f $HOME/.local/state/bvos/live-desktop-off ]] && echo off || echo on"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.desktopEnabled = String(text).trim() === "on"
+    }
+  }
+
+  Process {
+    running: true
+    command: ["bash", "-c", "[[ -f $HOME/.local/state/bvos/constellation-lines ]] && echo on || echo off"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.constellationLines = String(text).trim() === "on"
+    }
+  }
+
+  function setConstellationLines(enabled) {
+    root.constellationLines = enabled
+    root.skyRevision++
+    Quickshell.execDetached(["bash", "-c", enabled
+      ? "mkdir -p \"$HOME/.local/state/bvos\" && touch \"$HOME/.local/state/bvos/constellation-lines\""
+      : "rm -f \"$HOME/.local/state/bvos/constellation-lines\""])
+  }
+
+  function setDesktop(enabled) {
+    root.desktopEnabled = enabled
+    Quickshell.execDetached(["bash", "-c", enabled
+      ? "rm -f \"$HOME/.local/state/bvos/live-desktop-off\""
+      : "mkdir -p \"$HOME/.local/state/bvos\" && touch \"$HOME/.local/state/bvos/live-desktop-off\""])
   }
 
   IpcHandler {
     target: "bvos-screensaver"
+    function lines(state: string): string {
+      if (state === "on" || state === "off") root.setConstellationLines(state === "on")
+      return root.constellationLines ? "on" : "off"
+    }
+    function desktop(state: string): string {
+      if (state === "on" || state === "off") root.setDesktop(state === "on")
+      return root.desktopEnabled ? "on" : "off"
+    }
     function show(): string { root.start(); return "ok" }
     function hide(): string { root.startedAt = 0; root.dismiss("ipc"); return "ok" }
     function state(): string { return root.active ? "active" : "inactive" }
@@ -271,6 +405,10 @@ Item {
       return "ok"
     }
     function weather(): string { return JSON.stringify(root.weather) }
+    function sky(): string {
+      return JSON.stringify({ date: root.skyDate().toString(), located: root.located, sun: root.sunArc, moon: root.moonArc,
+        moonFraction: root.moonFraction, moonWaxing: root.moonWaxing, limitingMagnitude: root.limitingMagnitude, cloudVelocity: root.cloudVelocity })
+    }
     function demo(condition: string, hour: string): string {
       root.demoMode = true
       return preview(condition, hour)
@@ -308,25 +446,11 @@ Item {
 
         Keys.onPressed: function(event) { root.dismiss("key"); event.accepted = true }
 
-        ShaderEffect {
+        Sky {
           anchors.fill: parent
-          property real time: root.time
-          property real aspect: width / Math.max(1, height)
-          property vector2d sunPos: Qt.vector2d(root.sunArc.x, root.sunArc.y)
-          property real sunAlt: root.sunArc.alt
-          property vector2d moonPos: Qt.vector2d(root.moonArc.x, root.moonArc.y)
-          property real moonAlt: root.moonArc.alt
-          property real moonLight: root.weather ? root.weather.moonIllumination / 100 : 0.5
-          property real cover: root.skyCover
-          property real gloom: root.skyGloom
-          property real rain: root.skyRain
-          property real snow: root.skySnow
-          property real fog: root.skyFog
-          property real storm: root.skyStorm
-          fragmentShader: Qt.resolvedUrl("clouds.frag.qsb")
-          layer.enabled: true
-          layer.smooth: true
-          layer.textureSize: Qt.size(Math.round(width * root.renderScale), Math.round(height * root.renderScale))
+          service: root
+          time: root.time
+          renderScale: root.renderScale
         }
 
         // Composition on the golden ratio: everything shares one axis at 1/φ
@@ -579,6 +703,35 @@ Item {
           onPressed: root.dismiss("mouse-press")
           onWheel: root.dismiss("wheel")
         }
+      }
+    }
+  }
+
+  Variants {
+    model: root.desktopEnabled ? Quickshell.screens : []
+
+    PanelWindow {
+      id: desk
+      required property var modelData
+      screen: modelData
+
+      anchors { top: true; bottom: true; left: true; right: true }
+      exclusionMode: ExclusionMode.Ignore
+      color: "transparent"
+
+      // Just above Omarchy's wallpaper and below every window. The empty input
+      // mask lets clicks through, so the wallpaper's double-click pickers still work.
+      WlrLayershell.namespace: "bvos-live-desktop"
+      WlrLayershell.layer: WlrLayer.Bottom
+      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+      mask: Region {}
+
+
+      Sky {
+        anchors.fill: parent
+        service: root
+        time: root.time
+        renderScale: 0.35
       }
     }
   }

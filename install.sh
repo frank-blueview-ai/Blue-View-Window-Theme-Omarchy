@@ -57,9 +57,11 @@ step "Installing the screensaver plugin"
 plugin="$HOME/.config/omarchy/plugins/bvos.screensaver"
 mkdir -p "$plugin"
 cp -r "$SRC/omarchy/plugins/bvos.screensaver/." "$plugin/"
-chmod +x "$plugin/weather.sh"
+chmod +x "$plugin/weather.sh" "$plugin/satellites.sh"
+rm -f "$plugin/clouds.frag"   # replaced by sky.glsl in newer versions
 if [[ -x /usr/lib/qt6/bin/qsb ]]; then
-  /usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o "$plugin/clouds.frag.qsb" "$plugin/clouds.frag"
+  /usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -DSKY_PASS -o "$plugin/sky.frag.qsb" "$plugin/sky.glsl"
+  /usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -DCLOUD_PASS -o "$plugin/clouds.frag.qsb" "$plugin/sky.glsl"
 fi
 
 shell_json="$HOME/.config/omarchy/shell.json"
@@ -97,5 +99,6 @@ Blue View OS desktop is installed.
   Window buttons   left: minimize, maximize, float   right: close
   Minimized tray   SUPER + M
   Screensaver      starts after idle.screensaver seconds (~/.config/omarchy/shell.json)
+  Live desktop     omarchy-shell bvos-screensaver desktop <on|off>
   Preview it       omarchy-shell bvos-screensaver preview live now
 DONE
