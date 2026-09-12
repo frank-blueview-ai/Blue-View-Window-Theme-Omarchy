@@ -1,0 +1,21 @@
+#!/bin/bash
+# Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+# Licensed under the PolyForm Noncommercial License 1.0.0.
+# Blue View OS: minimize/restore the active window.
+# Hyprland has no real minimize, so windows are parked in the
+# special:minimized workspace. Toggle the tray with SUPER + M; pressing the
+# yellow dot on a window inside the tray restores it to your workspace.
+
+win=$(hyprctl activewindow -j)
+[[ -z $win || $win == "{}" ]] && exit 0
+
+addr=$(jq -r '.address' <<<"$win")
+current=$(jq -r '.workspace.name' <<<"$win")
+
+if [[ $current == "special:minimized" ]]; then
+  target=$(hyprctl activeworkspace -j | jq -r '.id')
+  hyprctl dispatch "hl.dsp.window.move({ workspace = \"$target\", window = \"address:$addr\", follow = true })" >/dev/null
+  hyprctl dispatch 'hl.dsp.workspace.toggle_special("minimized")' >/dev/null
+else
+  hyprctl dispatch "hl.dsp.window.move({ workspace = \"special:minimized\", window = \"address:$addr\", follow = false })" >/dev/null
+fi

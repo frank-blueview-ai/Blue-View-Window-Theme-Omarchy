@@ -1,0 +1,65 @@
+#!/bin/bash
+# Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+# Licensed under the PolyForm Noncommercial License 1.0.0.
+# Blue View OS: build the hyprbars title-bar plugin for the installed Hyprland.
+#
+# Uses the headers shipped by the hyprland package, checks out the upstream
+# hyprland-plugins commit pinned for that exact Hyprland commit, applies the
+# BVOS per-button alignment patch, and installs the plugin. No sudo needed.
+# The new build is picked up on next login (or run with --load to load now).
+
+set -euo pipefail
+
+BVOS_DIR="$HOME/.local/share/bvos"
+REPO="$BVOS_DIR/hyprland-plugins"
+PATCH="$BVOS_DIR/hyprbars-button-align.patch"
+LIB_DIR="$HOME/.local/lib/bvos"
+PLUGIN="$LIB_DIR/hyprbars.so"
+STAMP="$LIB_DIR/hyprbars.hyprland-commit"
+
+fail() {
+  echo "bvos-hyprbars-build: $*" >&2
+  notify-send -u critical "Blue View OS title bars" "$*" 2>/dev/null || true
+  exit 1
+}
+
+hl_commit=$(sed -n 's/^#define GIT_COMMIT_HASH *"\(.*\)"/\1/p' /usr/include/hyprland/src/version.h)
+[[ -n $hl_commit ]] || fail "Hyprland headers not found in /usr/include/hyprland"
+
+if [[ ${1:-} != "--force" && ${1:-} != "--load" && -f $PLUGIN && $(cat "$STAMP" 2>/dev/null) == "$hl_commit" ]]; then
+  echo "hyprbars is already built for Hyprland $hl_commit"
+  exit 0
+fi
+
+if [[ ! -d $REPO/.git ]]; then
+  git clone -q -o upstream https://github.com/hyprwm/hyprland-plugins "$REPO"
+fi
+
+git -C "$REPO" fetch -q upstream || fail "could not fetch hyprland-plugins"
+
+# Pick the plugin commit pinned for this Hyprland commit, else upstream main.
+base=$(git -C "$REPO" show upstream/main:hyprpm.toml |
+  sed -n "s/.*\[\"$hl_commit\", *\"\([0-9a-f]*\)\"\].*/\1/p" | head -1)
+base=${base:-upstream/main}
+
+git -C "$REPO" checkout -q -f -B bvos "$base"
+git -C "$REPO" -c user.name="Blue View OS" -c user.email=noreply@blueview.ai am -q --3way "$PATCH" ||
+  { git -C "$REPO" am --abort 2>/dev/null; fail "patch no longer applies to hyprland-plugins $base; keeping previous build"; }
+
+build=$(mktemp -d)
+trap 'rm -rf "$build"' EXIT
+cp -r "$REPO/hyprbars/." "$build/"
+make -C "$build" -j"$(nproc)" all >"$build/build.log" 2>&1 ||
+  { tail -20 "$build/build.log" >&2; fail "build failed for Hyprland $hl_commit; keeping previous build"; }
+
+mkdir -p "$LIB_DIR"
+install -m755 "$build/hyprbars.so" "$PLUGIN.new"
+mv -f "$PLUGIN.new" "$PLUGIN"
+echo "$hl_commit" >"$STAMP"
+echo "Built hyprbars ($base) for Hyprland $hl_commit"
+
+if [[ ${1:-} == "--load" ]]; then
+  hyprctl plugin unload "$PLUGIN" >/dev/null 2>&1 || true
+  hyprctl plugin load "$PLUGIN"
+  hyprctl reload >/dev/null
+fi

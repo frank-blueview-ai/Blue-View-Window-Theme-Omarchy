@@ -1,0 +1,6 @@
+#!/bin/bash
+# Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+# Licensed under the PolyForm Noncommercial License 1.0.0.
+# Blue View OS: rebuild the title-bar plugin when Hyprland was updated.
+# The fresh build loads on next login (Omarchy asks to reboot after a Hyprland update).
+"$HOME/.local/bin/bvos-hyprbars-build"

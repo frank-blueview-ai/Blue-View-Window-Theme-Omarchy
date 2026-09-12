@@ -1,0 +1,38 @@
+# Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+# Licensed under the PolyForm Noncommercial License 1.0.0.
+# Blue View OS — brand navy glass with the logo's blue and yellow ovals.
+mode = "dark"
+
+accent = "#38b6ff"
+selection = "#1d3656"
+muted = "#5b7494"
+
+background = "#0b1326"
+dark_background = "#08101f"
+darker_background = "#050a14"
+lighter_background = "#16223a"
+
+foreground = "#dae2fd"
+dark_foreground = "#7f93b5"
+light_foreground = "#c4d2ec"
+bright_foreground = "#f5faff"
+
+# Subtle glass borders: logo blue into logo yellow.
+hyprland_active_border = "rgba(38b6ffaa) rgba(ffde5977) 45deg"
+hyprland_inactive_border = "rgba(ffffff14)"
+
+red = "#ff6b7a"
+yellow = "#ffde59"
+orange = "#ffa45c"
+green = "#5ee0a0"
+cyan = "#5fd4f4"
+blue = "#38b6ff"
+magenta = "#b18cff"
+brown = "#a07e5e"
+
+bright_red = "#ff8f9b"
+bright_yellow = "#ffe98a"
+bright_green = "#8af0bf"
+bright_cyan = "#8ee4f8"
+bright_blue = "#6fcbff"
+bright_magenta = "#c9adff"

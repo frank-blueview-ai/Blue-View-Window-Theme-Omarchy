@@ -1,0 +1,27 @@
+Blue View OS Desktop
+Copyright (c) 2026 The Blue View Group Corporation (https://blueview.ai)
+Author: Frank Perez <frank@blueview.ai>
+
+Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE).
+Commercial use requires a separate written license from
+The Blue View Group Corporation. Contact: frank@blueview.ai
+
+"Blue View", "Blue View OS", and the Blue View logo are trademarks of
+The Blue View Group Corporation. The license does not grant any right to use
+them except to leave the branding in this software unchanged.
+
+Third-party components
+----------------------
+
+hyprbars/hyprbars-button-align.patch
+  A patch to the hyprbars plugin from https://github.com/hyprwm/hyprland-plugins.
+  hyprland-plugins is Copyright (c) 2023, Hypr Development, licensed under the
+  BSD 3-Clause License (see hyprbars/LICENSE.hyprland-plugins). The patch is
+  distributed under that same license. The plugin source itself is downloaded
+  from upstream at install time.
+
+Fonts (downloaded at install time, not included): Geist, Manrope and Inter,
+  from Google Fonts, under the SIL Open Font License 1.1.
+
+Weather data (fetched at runtime): wttr.in and Open-Meteo (https://open-meteo.com,
+  CC BY 4.0 data).
