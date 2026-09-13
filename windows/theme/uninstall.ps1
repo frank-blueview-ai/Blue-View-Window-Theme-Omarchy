@@ -69,7 +69,15 @@ Invoke-Quietly 'Glass taskbar' {
 Write-Step 'Removing Blue View OS files'
 Invoke-Quietly 'Files' {
     if (Test-Path $InstallDir) {
-        Remove-Item $InstallDir -Recurse -Force
+        # This script may be running from the setup copy inside that folder; keep that one.
+        $here = (Resolve-Path $PSScriptRoot).Path.TrimEnd('\')
+        Get-ChildItem $InstallDir -Force | Where-Object { $here -ne $_.FullName -and -not $here.StartsWith($_.FullName + '\') } |
+            Remove-Item -Recurse -Force
+        if ((Get-ChildItem $InstallDir -Force | Measure-Object).Count -eq 0) {
+            Remove-Item $InstallDir -Force
+        } else {
+            Write-Note "You can delete $here now."
+        }
     }
 }
 

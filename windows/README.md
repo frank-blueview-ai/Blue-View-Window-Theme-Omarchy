@@ -19,17 +19,23 @@ The installer uses Windows' own `winget` to install the three apps and sets them
 
 ### Install the theme
 
-1. Download **Blue-View-OS-Windows-11-Theme.zip** from [Releases](https://github.com/frank-blueview-ai/Blue-View-Window-Theme-Omarchy/releases) and unzip it.
-2. Open the unzipped folder, click the address bar, type `powershell` and press Enter.
-3. Run:
+**Easiest: one command.** Open **PowerShell** (press the Windows key, type `powershell`, press Enter), paste this line and press Enter:
 
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\install.ps1
-   ```
+```powershell
+irm https://raw.githubusercontent.com/frank-blueview-ai/Blue-View-Window-Theme-Omarchy/main/windows/get.ps1 | iex
+```
 
-4. Windows asks for permission twice: once to install Windhawk, and once to set up its title bar mod. Say **Yes** to both.
+It downloads the newest Blue View OS theme, unpacks it to `%LOCALAPPDATA%\BlueViewOS\Setup`, and runs the installer.
 
-At the end the installer prints a summary of which parts worked. Apps that were already open get the glass the next time you open them.
+**Or download it yourself:**
+
+1. Download **Blue-View-OS-Windows-11-Theme.zip** from [Releases](https://github.com/frank-blueview-ai/Blue-View-Window-Theme-Omarchy/releases).
+2. Right-click the zip, choose **Extract All**, then **Extract**.
+3. In the folder that opens, double-click **Install.cmd**. If Windows asks whether to run it, choose **Run** (or **More info → Run anyway**).
+
+Either way, Windows asks for permission twice: once to install Windhawk, and once to set up its title bar mod. Say **Yes** to both. At the end the installer prints a summary of which parts worked. Apps that were already open get the glass the next time you open them.
+
+**Options** (for PowerShell, from the unpacked folder: `powershell -ExecutionPolicy Bypass -File .\install.ps1 -ThemeOnly`):
 
 | Option | What it does |
 | --- | --- |
@@ -41,7 +47,7 @@ At the end the installer prints a summary of which parts worked. Apps that were 
 
 ### Remove the theme
 
-From the same folder:
+Double-click **Uninstall.cmd** in the setup folder (`%LOCALAPPDATA%\BlueViewOS\Setup` if you used the one command, otherwise the folder you extracted). Or, in PowerShell from that folder:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\uninstall.ps1

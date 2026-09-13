@@ -47,14 +47,15 @@ THEME_ZIP="$ROOT/dist/Blue-View-OS-Windows-11-Theme.zip"
 
 rm -rf "$THEME_PACKAGE"
 mkdir -p "$THEME_PACKAGE/wallpapers"
-cp "$THEME_SRC"/{install.ps1,uninstall.ps1,common.ps1,windhawk-mod.ps1,mica-for-everyone.json,translucenttb.json} "$THEME_PACKAGE/"
+cp "$THEME_SRC"/{Install.cmd,Uninstall.cmd,install.ps1,uninstall.ps1,common.ps1,windhawk-mod.ps1,mica-for-everyone.json,translucenttb.json} "$THEME_PACKAGE/"
 cp "$THEME_SRC/Blue View OS.theme.in" "$THEME_PACKAGE/"
 mkdir -p "$THEME_PACKAGE/tiling" && cp "$THEME_SRC/tiling/BlueViewTiling.cs" "$THEME_PACKAGE/tiling/"
 cp "$THEME_SRC"/wallpapers/*.jpg "$THEME_PACKAGE/wallpapers/"
 cp "$ROOT/windows/README.md" "$ROOT/LICENSE" "$ROOT/NOTICE" "$THEME_PACKAGE/"
 
+# Files at the top of the zip: Windows' "Extract All" already makes a folder for it.
 rm -f "$THEME_ZIP"
-(cd "$ROOT/dist/windows" && zip -qr9 "$THEME_ZIP" "$(basename "$THEME_PACKAGE")")
+(cd "$THEME_PACKAGE" && zip -qr9 "$THEME_ZIP" .)
 echo "Built $THEME_ZIP"
 
 # The .deskthemepack is a CAB with the theme at the root and the wallpapers in
