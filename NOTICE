@@ -21,7 +21,9 @@ hyprbars/hyprbars-button-align.patch
   from upstream at install time.
 
 Fonts (downloaded at install time, not included): Geist, Manrope and Inter,
-  from Google Fonts, under the SIL Open Font License 1.1.
+  from Google Fonts, under the SIL Open Font License 1.1. The Windows package
+  bundles Geist, Manrope and Weather Icons (c) Erik Flowers, all under the
+  SIL Open Font License 1.1.
 
 omarchy/plugins/bvos.screensaver/SGP4.js
   satellite.js v5.0.0, Copyright (C) 2013 Shashwat Kandadai and UCSC Jack Baskin
@@ -38,4 +40,5 @@ omarchy/plugins/bvos.screensaver/constellations.json
 Satellite orbital elements (fetched at runtime): CelesTrak (https://celestrak.org).
 
 Weather data (fetched at runtime): wttr.in and Open-Meteo (https://open-meteo.com,
-  CC BY 4.0 data).
+  CC BY 4.0 data). The Windows package finds its location with GeoJS
+  (https://www.geojs.io) unless a place is set.

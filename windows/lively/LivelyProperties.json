@@ -1,0 +1,49 @@
+{
+  "location": {
+    "type": "textbox",
+    "text": "Location",
+    "help": "A city, like \"Lynn, MA\" or \"London\". Leave blank to find it automatically from your internet connection.",
+    "value": ""
+  },
+  "units": {
+    "type": "dropdown",
+    "text": "Temperature",
+    "items": ["Automatic", "Fahrenheit", "Celsius"],
+    "value": 0
+  },
+  "overlay": {
+    "type": "checkbox",
+    "text": "Show logo, clock and forecast",
+    "help": "Turn on for a screensaver look. Lively's screensaver uses this same wallpaper.",
+    "value": false
+  },
+  "satellites": {
+    "type": "checkbox",
+    "text": "Satellites",
+    "help": "The ISS, Tiangong and the brightest satellites, when they're really visible from where you are.",
+    "value": true
+  },
+  "constellations": {
+    "type": "checkbox",
+    "text": "Constellation lines",
+    "value": false
+  },
+  "fps": {
+    "type": "slider",
+    "text": "Frame rate",
+    "help": "Lower saves power. The clouds move slowly, so 24 looks smooth.",
+    "min": 6,
+    "max": 60,
+    "step": 1,
+    "value": 24
+  },
+  "detail": {
+    "type": "slider",
+    "text": "Cloud detail (%)",
+    "help": "Resolution the clouds render at. Clouds are soft, so 40% looks the same as 100% and uses far less GPU.",
+    "min": 20,
+    "max": 100,
+    "step": 5,
+    "value": 40
+  }
+}

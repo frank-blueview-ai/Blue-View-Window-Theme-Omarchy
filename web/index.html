@@ -1,0 +1,68 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+  Licensed under the PolyForm Noncommercial License 1.0.0.
+
+  Blue View OS sky for any platform: the live desktop and screensaver from the
+  Omarchy version, as one web page. Wrappers load it as a wallpaper
+  (Lively Wallpaper on Windows) or a screensaver.
+
+  URL options, for browsers and testing:
+    ?overlay=1            show the logo, clock and forecast
+    ?lines=1              constellation lines
+    ?satellites=0         hide satellites
+    ?location=Lynn, MA    fixed place instead of automatic location
+    ?units=F|C            temperature units
+    ?fps=30               frame rate
+    ?detail=40            cloud render resolution, percent
+    ?condition=storm      preview clear|partly|cloudy|overcast|rain|storm|snow|fog
+    ?hour=21              preview today at this hour (0-23)
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blue View OS Sky</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="starting">
+<canvas id="sky"></canvas>
+<canvas id="stars"></canvas>
+<canvas id="satellites"></canvas>
+<canvas id="clouds"></canvas>
+
+<div id="composition" hidden>
+  <div id="brand">
+    <img id="logo" src="blueview-logo.svg" alt="Blue View">
+    <div id="wordmark">BLUE VIEW OS</div>
+    <div id="clock"></div>
+    <div id="date"></div>
+  </div>
+
+  <div id="forecast" hidden>
+    <div id="now">
+      <span id="now-icon" class="wi"></span>
+      <div>
+        <div id="now-temp"></div>
+        <div id="now-desc"></div>
+        <div id="now-place"></div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div id="days"></div>
+  </div>
+
+  <div id="site">bvos.blueview.ai</div>
+</div>
+
+<script src="generated/astro.js"></script>
+<script src="generated/sgp4.js"></script>
+<script src="generated/sky-shader.js"></script>
+<script src="generated/star-data.js"></script>
+<script src="weather.js"></script>
+<script src="sky-gl.js"></script>
+<script src="stars.js"></script>
+<script src="satellites.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

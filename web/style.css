@@ -1,0 +1,126 @@
+/* Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+   Licensed under the PolyForm Noncommercial License 1.0.0. */
+
+@font-face { font-family: "Geist"; src: url("fonts/Geist-Variable.ttf") format("truetype"); font-weight: 100 900; }
+@font-face { font-family: "Manrope"; src: url("fonts/Manrope-Variable.ttf") format("truetype"); font-weight: 200 800; }
+@font-face { font-family: "Weather Icons"; src: url("fonts/weathericons-regular-webfont.woff2") format("woff2"); }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  cursor: none;
+  user-select: none;
+}
+
+/* Layers, back to front: sky, stars, satellites, then the sun and moon ovals
+   and clouds. The shader canvases render at reduced resolution and upscale. */
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+body.starting canvas, body.starting #composition { opacity: 0; }
+canvas, #composition { transition: opacity 2.2s ease-in-out; }
+
+/* Golden-ratio composition; app.js sets the φ-step sizes (--s-2 … --s4). */
+#composition {
+  position: fixed;
+  inset: 0;
+  color: #fff;
+  filter: drop-shadow(0 2px 6px rgba(0, 10, 30, 0.32));
+}
+
+#brand, #forecast {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+#brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#logo { height: var(--s3); width: auto; }
+
+#wordmark {
+  margin-top: var(--s1);
+  color: #f5faff;
+  opacity: 0.88;
+  font: 600 var(--s0)/1.2 "Manrope", sans-serif;
+  letter-spacing: calc(var(--s0) * 0.618);
+  margin-right: calc(var(--s0) * -0.618);
+}
+
+#clock {
+  margin-top: var(--s2);
+  font: 200 var(--s4)/1.1 "Geist", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+#date {
+  margin-top: var(--s-1);
+  color: #e8eef5;
+  opacity: 0.85;
+  font: 500 var(--s1)/1.2 "Manrope", sans-serif;
+}
+
+/* Seven-day forecast on clear glass, breathing in and out every ~15 s. */
+#forecast {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s1) var(--s2);
+  border-radius: var(--s1);
+  background: rgba(10, 26, 51, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+  animation: breathe 15s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 1; }
+}
+
+#now { display: flex; align-items: center; gap: var(--s0); }
+#now > div { display: flex; flex-direction: column; gap: var(--s-2); }
+#now-icon { font-size: var(--s3); }
+#now-temp { font: 300 var(--s2)/1.1 "Geist", sans-serif; }
+#now-desc { color: #e8eef5; opacity: 0.85; font: 500 var(--s0)/1.2 "Manrope", sans-serif; }
+#now-place { color: #e8eef5; opacity: 0.6; font: 400 var(--s-1)/1.2 "Manrope", sans-serif; }
+
+.divider { width: 1px; height: var(--s4); background: rgba(255, 255, 255, 0.18); }
+
+#days { display: flex; gap: var(--s1); }
+
+.day {
+  width: var(--s3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.day .name { color: #e8eef5; opacity: 0.85; font: 600 var(--s0)/1.2 "Manrope", sans-serif; }
+.day .wi { font-size: var(--s2); line-height: 1.2; }
+.day .high { font: 500 var(--s0)/1.2 "Geist", sans-serif; }
+.day .low { color: #e8eef5; opacity: 0.6; font: 400 var(--s0)/1.2 "Geist", sans-serif; }
+
+.wi { font-family: "Weather Icons", sans-serif; color: #fff; }
+
+#site {
+  position: absolute;
+  left: 50%;
+  bottom: var(--s2);
+  transform: translateX(-50%);
+  opacity: 0.45;
+  font: 400 var(--s-1)/1 "Geist", sans-serif;
+  letter-spacing: calc(var(--s-1) * 0.3);
+}

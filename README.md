@@ -37,6 +37,10 @@ The same living sky is your desktop background and your screensaver. It's dark o
 - Renders the clouds at reduced resolution and draws the stars sharp. The desktop animates smoothly while you can see it and redraws only occasionally while windows cover it, so it stays light even on older integrated GPUs.
 - Closes on any key or mouse movement, respects idle inhibitors and Omarchy's stay-awake toggle, and never starts over the lock screen. Omarchy still locks at `idle.lock`.
 
+## On Windows
+
+The live sky also runs on Windows 10 and 11 as a desktop background and screensaver, through the free [Lively Wallpaper](https://www.rocksdanister.com/lively) app. See [windows/README.md](windows/README.md).
+
 ## Requirements
 
 - Omarchy with Hyprland 0.55 or newer (Lua config)
@@ -81,6 +85,8 @@ hooks/               Omarchy post-update hook that rebuilds the plugin
 omarchy/plugins/     bvos.screensaver: Quickshell service, sky shader (sky.glsl), astronomy
                      (Astro.js), stars, satellites (SGP4), weather
 omarchy/themes/      blue-view-os theme
+web/                 the same sky as a web page (WebGL 2), built from the Omarchy plugin sources
+windows/             Lively Wallpaper package for Windows
 ```
 
 ## Uninstall

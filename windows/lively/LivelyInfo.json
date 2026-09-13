@@ -1,0 +1,14 @@
+{
+  "AppVersion": "2.0.6.1",
+  "Title": "Blue View OS Sky",
+  "Thumbnail": "thumbnail.jpg",
+  "Preview": null,
+  "Desc": "A live sky above the clouds: the real sun, moon, stars and satellites for where you are, with clouds that follow your weather and wind.",
+  "Author": "The Blue View Group Corporation",
+  "License": "PolyForm Noncommercial 1.0.0. See LICENSE and NOTICE.",
+  "Contact": "https://bvos.blueview.ai",
+  "Type": 1,
+  "FileName": "index.html",
+  "Arguments": "--pause-event true",
+  "IsAbsolutePath": false
+}
