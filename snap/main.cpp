@@ -12,11 +12,23 @@
 // While the pointer waits at an edge, a clear glass preview shows where the
 // window will land. Snapped windows float; dragging one away from its snap
 // brings back the size it had before.
+//
+// SUPER + SHIFT + T (bound in bvos-windows.lua) tiles every window on the
+// workspace; pressing it again puts floating windows back where they were.
+// Dragging a tiled window keeps it in its tile while the glass preview marks
+// the tile under the pointer; letting go there swaps the two windows.
 
 #define WLR_USE_UNSTABLE
 
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/desktop/view/Window.hpp>
+#include <hyprland/src/desktop/state/FocusState.hpp>
+#include <hyprland/src/desktop/state/ViewHitTester.hpp>
+#include <hyprland/src/desktop/state/ViewStateTracker.hpp>
+#include <hyprland/src/desktop/state/WindowState.hpp>
+#include <hyprland/src/plugins/HookSystem.hpp>
+#include <hyprland/src/pointer/PointerManager.hpp>
+#include <hyprland/src/pointer/cursor/CursorShapeOverrideController.hpp>
 #include <hyprland/src/event/EventBus.hpp>
 #include <hyprland/src/layout/LayoutManager.hpp>
 #include <hyprland/src/layout/space/Space.hpp>
@@ -43,9 +55,6 @@ extern "C" {
 #include <lua.h>
 }
 
-#ifdef BVOS_SNAP_TEST
-#include <hyprland/src/desktop/state/FocusState.hpp>
-#endif
 
 inline HANDLE PHANDLE = nullptr;
 
@@ -59,6 +68,19 @@ enum eZone : uint8_t {
     ZONE_TOP_RIGHT,
     ZONE_BOTTOM_LEFT,
     ZONE_BOTTOM_RIGHT,
+    ZONE_TILE, // over another tiled window: swap
+};
+
+// A window's floating place before "tile all", to put it back.
+struct SFloatingPlace {
+    PHLWINDOWREF window;
+    CBox         box;
+    bool         maximized = false;
+};
+
+struct STiledWorkspace {
+    PHLWORKSPACEREF             workspace;
+    std::vector<SFloatingPlace> places;
 };
 
 struct SSnapped {
@@ -70,6 +92,7 @@ struct SSnapped {
 static struct {
     struct {
         SP<Config::Values::CBoolValue>  enabled;
+        SP<Config::Values::CBoolValue>  swap;
         SP<Config::Values::CIntValue>   edge;
         SP<Config::Values::CIntValue>   corner;
         SP<Config::Values::CColorValue> previewColor;
@@ -88,6 +111,14 @@ static struct {
     std::chrono::steady_clock::time_point previewSince;
 
     std::vector<SSnapped>                 snapped;
+
+    // Dragging a tiled window: it stays in its tile until dropped.
+    bool                                  tileDragging = false;
+    PHLWINDOWREF                          tileDragWindow;
+    PHLWINDOWREF                          swapWith;
+
+    std::vector<STiledWorkspace>          tiled;
+    CFunctionHook*                        dragBeginHook = nullptr;
 } g_state;
 
 static constexpr double FADE_MS = 140.0;
@@ -176,8 +207,9 @@ static void damagePreview() {
         g_pHyprRenderer->damageBox(g_state.previewBox.copy().expand(2));
 }
 
-static void setPreview(eZone zone, PHLMONITOR monitor) {
-    if (zone == g_state.zone && monitor == g_state.monitor.lock())
+// `tileBox` is the tile to highlight for ZONE_TILE.
+static void setPreview(eZone zone, PHLMONITOR monitor, const CBox& tileBox = {}) {
+    if (zone == g_state.zone && monitor == g_state.monitor.lock() && (zone != ZONE_TILE || tileBox == g_state.previewBox))
         return;
 
     damagePreview();
@@ -185,7 +217,7 @@ static void setPreview(eZone zone, PHLMONITOR monitor) {
     g_state.monitor = monitor;
     if (zone != ZONE_NONE) {
         // Maximized windows fill the screen below the bar, without the outer gaps.
-        g_state.previewBox   = zone == ZONE_TOP ? monitor->logicalBoxMinusReserved() : cellFor(zone, monitor);
+        g_state.previewBox   = zone == ZONE_TILE ? tileBox : zone == ZONE_TOP ? monitor->logicalBoxMinusReserved() : cellFor(zone, monitor);
         g_state.previewSince = std::chrono::steady_clock::now();
     }
     damagePreview();
@@ -313,6 +345,159 @@ static void restoreOnDragAway(PHLWINDOW window, const Vector2D& pointer) {
     g_layoutManager->dragController()->updateDragWindow();
 }
 
+// ---- Tile all ----------------------------------------------------------------
+
+static PHLWORKSPACE activeWorkspace() {
+    const auto MONITOR = Desktop::focusState()->monitor();
+    if (!MONITOR)
+        return nullptr;
+    return MONITOR->m_activeSpecialWorkspace ? MONITOR->m_activeSpecialWorkspace : MONITOR->m_activeWorkspace;
+}
+
+static std::vector<PHLWINDOW> windowsOn(PHLWORKSPACE workspace) {
+    std::vector<PHLWINDOW> out;
+    for (const auto& w : Desktop::windowState()->windows()) {
+        if (validMapped(w) && w->m_workspace == workspace && !w->isHidden() && !w->m_pinned && w->layoutTarget())
+            out.push_back(w);
+    }
+    return out;
+}
+
+// Tiles every window on the active workspace. If they're already all tiled and
+// this workspace was tiled by us, puts the windows that were floating back.
+static void tileAll() {
+    const auto WORKSPACE = activeWorkspace();
+    if (!WORKSPACE)
+        return;
+
+    std::erase_if(g_state.tiled, [](const STiledWorkspace& t) { return !t.workspace.lock(); });
+    auto       previous = std::ranges::find_if(g_state.tiled, [&](const STiledWorkspace& t) { return t.workspace.lock() == WORKSPACE; });
+
+    const auto WINDOWS  = windowsOn(WORKSPACE);
+    const bool ANYLOOSE = std::ranges::any_of(WINDOWS, [](const PHLWINDOW& w) { return w->m_isFloating || Fullscreen::controller()->isFullscreen(w); });
+
+    if (!ANYLOOSE) {
+        if (previous == g_state.tiled.end())
+            return;
+
+        // Restore: float them again, where they were.
+        for (const auto& place : previous->places) {
+            const auto W = place.window.lock();
+            if (!validMapped(W) || W->m_workspace != WORKSPACE)
+                continue;
+            // A window that was maximized in its tile has no floating place; just maximize it again.
+            if (!place.box.empty()) {
+                const auto TARGET = W->layoutTarget();
+                if (!TARGET->floating())
+                    g_layoutManager->changeFloatingMode(TARGET);
+                g_layoutManager->setTargetGeom(place.box, TARGET);
+            }
+            if (place.maximized)
+                Fullscreen::controller()->setFullscreenMode(W, Fullscreen::FSMODE_MAXIMIZED, std::nullopt);
+        }
+        g_state.tiled.erase(previous);
+        return;
+    }
+
+    STiledWorkspace state{WORKSPACE, {}};
+    for (const auto& W : WINDOWS) {
+        const bool MAXIMIZED = Fullscreen::controller()->isFullscreen(W);
+        if (MAXIMIZED)
+            Fullscreen::controller()->setFullscreenMode(W, Fullscreen::FSMODE_NONE, std::nullopt);
+
+        const auto TARGET = W->layoutTarget();
+        if (!TARGET->floating()) {
+            if (MAXIMIZED)
+                state.places.push_back({W, CBox{}, true});
+            continue;
+        }
+
+        state.places.push_back({W, TARGET->position(), MAXIMIZED});
+        std::erase_if(g_state.snapped, [&](const SSnapped& s) { return s.window.lock() == W; });
+        g_layoutManager->changeFloatingMode(TARGET);
+    }
+
+    if (previous != g_state.tiled.end())
+        *previous = std::move(state);
+    else
+        g_state.tiled.push_back(std::move(state));
+}
+
+// ---- Swap by drag ------------------------------------------------------------
+//
+// Hyprland lifts a tiled window out of the layout as soon as a drag begins, and
+// the gap it leaves closes, so the tile can't be given back afterwards. Instead,
+// a drag on a tiled window doesn't start Hyprland's drag at all: the window stays
+// put, the preview follows the pointer, and the drop decides what happens.
+
+static void endTileDrag() {
+    if (!g_state.tileDragging)
+        return;
+    g_state.tileDragging = false;
+    g_state.tileDragWindow.reset();
+    g_state.swapWith.reset();
+    setPreview(ZONE_NONE, nullptr);
+    Pointer::Cursor::overrideController->unsetOverride(Pointer::Cursor::CURSOR_OVERRIDE_SPECIAL_ACTION);
+}
+
+static void hkDragBegin(Layout::Supplementary::CDragStateController* thisptr, SP<Layout::ITarget> target, eMouseBindMode mode, std::optional<Layout::eRectCorner> forcedEdge,
+                        bool exclusiveDeviceGrab) {
+    const auto WINDOW = target ? target->window() : nullptr;
+
+    if (g_state.config.enabled->value() && g_state.config.swap->value() && mode == MBIND_MOVE && validMapped(WINDOW) && !target->floating() &&
+        !Fullscreen::controller()->isFullscreen(WINDOW)) {
+        g_state.tileDragging   = true;
+        g_state.tileDragWindow = WINDOW;
+        g_state.swapWith.reset();
+        Pointer::Cursor::overrideController->setOverride("grabbing", Pointer::Cursor::CURSOR_OVERRIDE_SPECIAL_ACTION);
+        return;
+    }
+
+    using FDragBegin = void (*)(Layout::Supplementary::CDragStateController*, SP<Layout::ITarget>, eMouseBindMode, std::optional<Layout::eRectCorner>, bool);
+    ((FDragBegin)g_state.dragBeginHook->m_original)(thisptr, target, mode, forcedEdge, exclusiveDeviceGrab);
+}
+
+static void onTileDragMove(const Vector2D& pos) {
+    const auto WINDOW  = g_state.tileDragWindow.lock();
+    const auto MONITOR = State::monitorState()->query().vec(pos).run();
+    if (!validMapped(WINDOW) || !MONITOR) {
+        endTileDrag();
+        return;
+    }
+
+    if (const auto ZONE = zoneAt(pos, MONITOR); ZONE != ZONE_NONE) {
+        g_state.swapWith.reset();
+        setPreview(ZONE, MONITOR);
+        return;
+    }
+
+    const auto OTHER = Desktop::viewState()->hitTest().windowAt(pos, Desktop::View::RESERVED_EXTENTS | Desktop::View::INPUT_EXTENTS, WINDOW);
+    if (validMapped(OTHER) && !OTHER->m_isFloating && OTHER->m_workspace == WINDOW->m_workspace && !Fullscreen::controller()->isFullscreen(OTHER)) {
+        g_state.swapWith = OTHER;
+        setPreview(ZONE_TILE, MONITOR, OTHER->getFullWindowBoundingBox());
+    } else {
+        g_state.swapWith.reset();
+        setPreview(ZONE_NONE, nullptr);
+    }
+}
+
+static void onTileDragDrop() {
+    const auto WINDOW  = g_state.tileDragWindow.lock();
+    const auto OTHER   = g_state.swapWith.lock();
+    const auto ZONE    = g_state.zone;
+    const auto MONITOR = g_state.monitor.lock();
+    endTileDrag();
+
+    if (!validMapped(WINDOW))
+        return;
+
+    if (ZONE == ZONE_TILE && validMapped(OTHER) && !OTHER->m_isFloating && !WINDOW->m_isFloating && OTHER->m_workspace == WINDOW->m_workspace) {
+        g_layoutManager->switchTargets(WINDOW->layoutTarget(), OTHER->layoutTarget(), false);
+    } else if (ZONE != ZONE_NONE && ZONE != ZONE_TILE) {
+        applySnap(WINDOW, ZONE, MONITOR);
+    }
+}
+
 // ---- Input -------------------------------------------------------------------
 
 static PHLWINDOW draggedWindow() {
@@ -324,6 +509,11 @@ static PHLWINDOW draggedWindow() {
 }
 
 static void onMouseMove(const Vector2D& pos) {
+    if (g_state.tileDragging) {
+        onTileDragMove(pos);
+        return;
+    }
+
     const auto WINDOW = g_state.config.enabled->value() ? draggedWindow() : nullptr;
 
     if (!WINDOW) {
@@ -351,7 +541,15 @@ static void onMouseMove(const Vector2D& pos) {
 }
 
 static void onMouseButton(const IPointer::SButtonEvent& e) {
-    if (e.state == WL_POINTER_BUTTON_STATE_PRESSED || !g_state.dragging)
+    if (e.state == WL_POINTER_BUTTON_STATE_PRESSED)
+        return;
+
+    if (g_state.tileDragging) {
+        onTileDragDrop();
+        return;
+    }
+
+    if (!g_state.dragging)
         return;
 
     const auto WINDOW  = g_state.window.lock();
@@ -364,7 +562,7 @@ static void onMouseButton(const IPointer::SButtonEvent& e) {
     if (!WINDOW || ZONE == ZONE_NONE)
         return;
 
-    // Let Hyprland finish the drag first (it re-tiles windows that were tiled), then snap.
+    // Let Hyprland finish the drag first, then snap.
     g_pEventLoopManager->doLater([W = PHLWINDOWREF{WINDOW}, ZONE, M = PHLMONITORREF{MONITOR}] {
         if (g_layoutManager->dragController()->mode() != MBIND_INVALID)
             return;
@@ -374,8 +572,15 @@ static void onMouseButton(const IPointer::SButtonEvent& e) {
 
 // `hl.plugin.bvos_snap.version()`: also lets the Lua config tell the plugin is loaded.
 static int luaVersion(lua_State* L) {
-    lua_pushstring(L, "1.0");
+    lua_pushstring(L, "1.1");
     return 1;
+}
+
+// `hl.plugin.bvos_snap.tile_all()`: tile every window, or put floating windows back.
+static int luaTileAll(lua_State* L) {
+    if (g_state.config.enabled->value())
+        tileAll();
+    return 0;
 }
 
 #ifdef BVOS_SNAP_TEST
@@ -404,6 +609,34 @@ static int luaPreview(lua_State* L) {
     return 0;
 }
 
+// Simulates a drag of the i-th window of the active workspace to (x, y) and a drop there,
+// through Hyprland's own drag start (so the hook runs).
+static int luaDragTest(lua_State* L) {
+    const auto WINDOWS = windowsOn(activeWorkspace());
+    const auto I       = (size_t)luaL_checkinteger(L, 1);
+    const Vector2D TO{luaL_checknumber(L, 2), luaL_checknumber(L, 3)};
+    if (I >= WINDOWS.size())
+        return 0;
+    g_layoutManager->beginDragTarget(WINDOWS[I]->layoutTarget(), MBIND_MOVE);
+    const bool VIA_TILE_DRAG = g_state.tileDragging;
+    Pointer::mgr()->warpTo(TO);
+    onMouseMove(TO);
+    const auto ZONE = g_state.zone;
+    IPointer::SButtonEvent release;
+    release.state = WL_POINTER_BUTTON_STATE_RELEASED;
+    onMouseButton(release);
+    if (!VIA_TILE_DRAG)
+        CKeybindManager::changeMouseBindMode(MBIND_INVALID);
+    lua_pushboolean(L, VIA_TILE_DRAG);
+    lua_pushinteger(L, ZONE);
+    return 2;
+}
+
+static int luaHookOk(lua_State* L) {
+    lua_pushboolean(L, g_state.dragBeginHook != nullptr);
+    return 1;
+}
+
 static int luaZoneAt(lua_State* L) {
     const Vector2D POS{luaL_checknumber(L, 1), luaL_checknumber(L, 2)};
     const auto     MONITOR = State::monitorState()->query().vec(POS).run();
@@ -429,10 +662,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     }
 
     g_state.config.enabled      = makeShared<Config::Values::CBoolValue>("plugin:bvos_snap:enabled", "Snap windows dragged to a screen edge", true);
+    g_state.config.swap         = makeShared<Config::Values::CBoolValue>("plugin:bvos_snap:swap", "Dragging a tiled window onto another swaps them", true);
     g_state.config.edge         = makeShared<Config::Values::CIntValue>("plugin:bvos_snap:edge", "Distance from a screen edge that snaps, in pixels", 6);
     g_state.config.corner       = makeShared<Config::Values::CIntValue>("plugin:bvos_snap:corner", "Distance along an edge that counts as a corner, in pixels", 120);
     g_state.config.previewColor = makeShared<Config::Values::CColorValue>("plugin:bvos_snap:preview_color", "Glass preview tint", 0x1438b6ff);
     HyprlandAPI::addConfigValueV2(PHANDLE, g_state.config.enabled);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_state.config.swap);
     HyprlandAPI::addConfigValueV2(PHANDLE, g_state.config.edge);
     HyprlandAPI::addConfigValueV2(PHANDLE, g_state.config.corner);
     HyprlandAPI::addConfigValueV2(PHANDLE, g_state.config.previewColor);
@@ -445,18 +680,36 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     });
 
     HyprlandAPI::addLuaFunction(PHANDLE, "bvos_snap", "version", luaVersion);
+    HyprlandAPI::addLuaFunction(PHANDLE, "bvos_snap", "tile_all", luaTileAll);
 #ifdef BVOS_SNAP_TEST
     HyprlandAPI::addLuaFunction(PHANDLE, "bvos_snap", "snap", luaSnap);
     HyprlandAPI::addLuaFunction(PHANDLE, "bvos_snap", "preview", luaPreview);
     HyprlandAPI::addLuaFunction(PHANDLE, "bvos_snap", "zone_at", luaZoneAt);
+    HyprlandAPI::addLuaFunction(PHANDLE, "bvos_snap", "drag_test", luaDragTest);
+    HyprlandAPI::addLuaFunction(PHANDLE, "bvos_snap", "hook_ok", luaHookOk);
 #endif
+
+    // Swapping by drag starts before Hyprland would lift a tiled window out of the layout.
+    for (const auto& match : HyprlandAPI::findFunctionsByName(PHANDLE, "dragBegin")) {
+        if (match.demangled.find("CDragStateController::dragBegin") == std::string::npos)
+            continue;
+        g_state.dragBeginHook = HyprlandAPI::createFunctionHook(PHANDLE, match.address, (void*)&hkDragBegin);
+        if (g_state.dragBeginHook && !g_state.dragBeginHook->hook())
+            g_state.dragBeginHook = nullptr;
+        break;
+    }
+    if (!g_state.dragBeginHook)
+        HyprlandAPI::addNotification(PHANDLE, "[bvos-snap] Swapping windows by drag is unavailable on this Hyprland version", CHyprColor{1.0, 0.8, 0.2, 1.0}, 5000);
 
     HyprlandAPI::reloadConfig();
 
-    return {"bvos-snap", "Blue View OS: snap windows dragged to screen edges and corners", "The Blue View Group Corporation", "1.0"};
+    return {"bvos-snap", "Blue View OS: snap windows to edges and corners, tile all, swap by drag", "The Blue View Group Corporation", "1.1"};
 }
 
 APICALL EXPORT void PLUGIN_EXIT() {
+    endTileDrag();
     setPreview(ZONE_NONE, nullptr);
     g_state.snapped.clear();
+    g_state.tiled.clear();
+    // Hyprland removes the plugin's function hooks itself when it unloads.
 }

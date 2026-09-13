@@ -7,7 +7,9 @@
 -- `omarchy update` by the post-update hook) and loaded at login.
 --
 -- Window snapping, like Windows: drag a window to a screen edge or corner and
--- let go. Built by `bvos-snap-build`, rebuilt and loaded the same way.
+-- let go. Drag a tiled window onto another to swap them. SUPER + SHIFT + T tiles
+-- every window; press it again to put floating windows back. Built by
+-- `bvos-snap-build`, rebuilt and loaded the same way.
 
 -- Glass needs blur behind translucent surfaces (Omarchy ships with it off).
 hl.config({
@@ -28,12 +30,20 @@ o.exec_on_start("hyprctl plugin load " .. os.getenv("HOME") .. "/.local/lib/bvos
 -- Restore minimized windows: SUPER + M shows the tray.
 o.bind("SUPER + M", "Show minimized windows", hl.dsp.workspace.toggle_special("minimized"))
 
+-- Tile every window on the workspace; again to put floating windows back.
+o.bind("SUPER + SHIFT + T", "Tile all windows", function()
+  if hl.plugin and hl.plugin.bvos_snap ~= nil then
+    hl.plugin.bvos_snap.tile_all()
+  end
+end)
+
 -- Snap preview: clear glass with a faint brand-blue tint.
 if hl.plugin and hl.plugin.bvos_snap ~= nil then
   hl.config({
     plugin = {
       bvos_snap = {
         enabled = true,
+        swap = true,      -- drag a tiled window onto another to swap them
         edge = 6,         -- pixels from a screen edge that snap
         corner = 120,     -- pixels along an edge that count as a corner
         preview_color = "rgba(38b6ff14)",

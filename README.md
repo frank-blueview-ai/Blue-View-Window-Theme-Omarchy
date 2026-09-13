@@ -28,6 +28,8 @@ astronomy, real weather and real wind.
   - **A corner:** that quarter
 - While you hold a window at an edge, a clear glass outline shows where it will land.
 - Tiled windows snap too: they float into place. Drag a snapped window away and it returns to its earlier size.
+- **Tile all:** **SUPER + SHIFT + T** arranges every window on the workspace in tiles. Press it again to put the windows that were floating, snapped or maximized back where they were.
+- **Swap:** drag a tiled window onto another tile (the glass outline marks it) and let go to swap the two.
 - A small plugin built against your installed Hyprland headers, like the title bars, and rebuilt after `omarchy update`.
 
 ### Blue View OS theme
@@ -79,7 +81,9 @@ The script backs up `hyprland.lua` and `shell.json` before editing them.
 | Close | Right dot on the title bar |
 | Show minimized windows | `SUPER + M` |
 | Snap a window | Drag it to a screen edge or corner and let go |
-| Snap settings | `plugin.bvos_snap` in `~/.config/hypr/bvos-windows.lua` (`enabled`, `edge`, `corner`, `preview_color`) |
+| Tile all windows / put them back | `SUPER + SHIFT + T` |
+| Swap two tiled windows | Drag one onto the other and let go |
+| Snap settings | `plugin.bvos_snap` in `~/.config/hypr/bvos-windows.lua` (`enabled`, `swap`, `edge`, `corner`, `preview_color`) |
 | Screensaver delay | `idle.screensaver` in `~/.config/omarchy/shell.json` (seconds) |
 | Start the screensaver | `omarchy-shell bvos-screensaver show` |
 | Preview any weather and hour | `omarchy-shell bvos-screensaver preview <clear\|partly\|cloudy\|overcast\|rain\|storm\|snow\|fog\|live> <0-23\|now>` |
