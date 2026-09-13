@@ -19,6 +19,16 @@ astronomy, real weather and real wind.
 - Double-click a title bar to maximize. Minimized windows go to a tray: **SUPER + M** shows it, and the yellow dot restores a window.
 - The bars come from [hyprbars](https://github.com/hyprwm/hyprland-plugins/tree/main/hyprbars), with a small patch that lets each button sit on either side. The plugin is built against your installed Hyprland headers, so no `hyprpm` or `sudo` is needed. It rebuilds automatically after `omarchy update`.
 
+### Window snapping
+- Drag any window by its title bar, or with **SUPER + drag**, and let go at a screen edge, like on Windows:
+  - **Left or right edge:** that half of the screen
+  - **Top edge:** maximized
+  - **Bottom edge:** the bottom half
+  - **A corner:** that quarter
+- While you hold a window at an edge, a clear glass outline shows where it will land.
+- Tiled windows snap too: they float into place. Drag a snapped window away and it returns to its earlier size.
+- A small plugin built against your installed Hyprland headers, like the title bars, and rebuilt after `omarchy update`.
+
 ### Blue View OS theme
 - Brand navy glass, with the logo's blue (`#38b6ff`) and yellow (`#ffde59`) as accents.
 - Window borders use a subtle blue-to-yellow gradient.
@@ -64,6 +74,8 @@ The script backs up `hyprland.lua` and `shell.json` before editing them.
 | Minimize / maximize / float | Left dots on the title bar |
 | Close | Right dot on the title bar |
 | Show minimized windows | `SUPER + M` |
+| Snap a window | Drag it to a screen edge or corner and let go |
+| Snap settings | `plugin.bvos_snap` in `~/.config/hypr/bvos-windows.lua` (`enabled`, `edge`, `corner`, `preview_color`) |
 | Screensaver delay | `idle.screensaver` in `~/.config/omarchy/shell.json` (seconds) |
 | Start the screensaver | `omarchy-shell bvos-screensaver show` |
 | Preview any weather and hour | `omarchy-shell bvos-screensaver preview <clear\|partly\|cloudy\|overcast\|rain\|storm\|snow\|fog\|live> <0-23\|now>` |
@@ -72,16 +84,18 @@ The script backs up `hyprland.lua` and `shell.json` before editing them.
 | Constellation lines on / off | `omarchy-shell bvos-screensaver lines <on\|off>` |
 | Inspect the computed sky | `omarchy-shell bvos-screensaver sky` |
 | Rebuild the title-bar plugin | `bvos-hyprbars-build --load` |
+| Rebuild the snapping plugin | `bvos-snap-build --load` |
 
 Weather uses the location set in Omarchy's weather widget. Current conditions, wind and coordinates come from [wttr.in](https://wttr.in); the 7-day forecast comes from [Open-Meteo](https://open-meteo.com); satellite orbits come from [CelesTrak](https://celestrak.org).
 
 ## Layout of this repo
 
 ```
-bin/                 bvos-window-minimize, bvos-hyprbars-build
+bin/                 bvos-window-minimize, bvos-hyprbars-build, bvos-snap-build
 hypr/                bvos-windows.lua (title bars, buttons, blur, SUPER + M)
 hyprbars/            per-button alignment patch for hyprbars
-hooks/               Omarchy post-update hook that rebuilds the plugin
+snap/                window-snapping plugin (C++, built against the installed Hyprland)
+hooks/               Omarchy post-update hooks that rebuild the plugins
 omarchy/plugins/     bvos.screensaver: Quickshell service, sky shader (sky.glsl), astronomy
                      (Astro.js), stars, satellites (SGP4), weather
 omarchy/themes/      blue-view-os theme

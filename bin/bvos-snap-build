@@ -1,0 +1,49 @@
+#!/bin/bash
+# Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+# Licensed under the PolyForm Noncommercial License 1.0.0.
+# Blue View OS: build the window-snapping plugin for the installed Hyprland.
+#
+# Compiles ~/.local/share/bvos/snap against the headers shipped by the hyprland
+# package and installs the plugin. No sudo needed. The new build is picked up
+# on next login (or run with --load to load it now).
+
+set -euo pipefail
+
+SRC="$HOME/.local/share/bvos/snap"
+LIB_DIR="$HOME/.local/lib/bvos"
+PLUGIN="$LIB_DIR/bvos-snap.so"
+STAMP="$LIB_DIR/bvos-snap.hyprland-commit"
+
+fail() {
+  echo "bvos-snap-build: $*" >&2
+  notify-send -u critical "Blue View OS window snapping" "$*" 2>/dev/null || true
+  exit 1
+}
+
+hl_commit=$(sed -n 's/^#define GIT_COMMIT_HASH *"\(.*\)"/\1/p' /usr/include/hyprland/src/version.h)
+[[ -n $hl_commit ]] || fail "Hyprland headers not found in /usr/include/hyprland"
+[[ -f $SRC/main.cpp ]] || fail "plugin source not found in $SRC"
+
+source_hash=$(sha256sum "$SRC/main.cpp" | cut -d' ' -f1)
+if [[ ${1:-} != "--force" && ${1:-} != "--load" && -f $PLUGIN && $(cat "$STAMP" 2>/dev/null) == "$hl_commit $source_hash" ]]; then
+  echo "bvos-snap is already built for Hyprland $hl_commit"
+  exit 0
+fi
+
+build=$(mktemp -d)
+trap 'rm -rf "$build"' EXIT
+cp "$SRC/main.cpp" "$SRC/Makefile" "$build/"
+make -C "$build" -j"$(nproc)" all >"$build/build.log" 2>&1 ||
+  { tail -20 "$build/build.log" >&2; fail "build failed for Hyprland $hl_commit; keeping previous build"; }
+
+mkdir -p "$LIB_DIR"
+install -m755 "$build/bvos-snap.so" "$PLUGIN.new"
+mv -f "$PLUGIN.new" "$PLUGIN"
+echo "$hl_commit $source_hash" >"$STAMP"
+echo "Built bvos-snap for Hyprland $hl_commit"
+
+if [[ ${1:-} == "--load" ]]; then
+  hyprctl plugin unload "$PLUGIN" >/dev/null 2>&1 || true
+  hyprctl plugin load "$PLUGIN"
+  hyprctl reload >/dev/null
+fi

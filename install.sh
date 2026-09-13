@@ -25,10 +25,16 @@ done
 step "Installing commands"
 install -Dm755 "$SRC/bin/bvos-window-minimize" "$HOME/.local/bin/bvos-window-minimize"
 install -Dm755 "$SRC/bin/bvos-hyprbars-build" "$HOME/.local/bin/bvos-hyprbars-build"
+install -Dm755 "$SRC/bin/bvos-snap-build" "$HOME/.local/bin/bvos-snap-build"
 
 step "Building the title-bar plugin (hyprbars + Blue View OS button alignment)"
 install -Dm644 "$SRC/hyprbars/hyprbars-button-align.patch" "$HOME/.local/share/bvos/hyprbars-button-align.patch"
 "$HOME/.local/bin/bvos-hyprbars-build" --force
+
+step "Building the window-snapping plugin"
+install -Dm644 "$SRC/snap/main.cpp" "$HOME/.local/share/bvos/snap/main.cpp"
+install -Dm644 "$SRC/snap/Makefile" "$HOME/.local/share/bvos/snap/Makefile"
+"$HOME/.local/bin/bvos-snap-build" --force
 
 step "Configuring Hyprland window chrome"
 install -Dm644 "$SRC/hypr/bvos-windows.lua" "$HOME/.config/hypr/bvos-windows.lua"
@@ -37,8 +43,9 @@ if ! grep -q 'require("hypr.bvos-windows")' "$HOME/.config/hypr/hyprland.lua"; t
   printf '\n-- Blue View OS glass title bars and window buttons.\nrequire("hypr.bvos-windows")\n' >>"$HOME/.config/hypr/hyprland.lua"
 fi
 
-step "Installing the update hook (rebuilds the plugin after Hyprland updates)"
+step "Installing the update hooks (rebuild the plugins after Hyprland updates)"
 install -Dm755 "$SRC/hooks/post-update.d/bvos-hyprbars" "$HOME/.config/omarchy/hooks/post-update.d/bvos-hyprbars"
+install -Dm755 "$SRC/hooks/post-update.d/bvos-snap" "$HOME/.config/omarchy/hooks/post-update.d/bvos-snap"
 
 step "Installing brand fonts (Geist, Manrope, Inter)"
 fonts="$HOME/.local/share/fonts/bvos"
@@ -82,6 +89,7 @@ cp -r "$SRC/omarchy/themes/blue-view-os/." "$HOME/.config/omarchy/themes/blue-vi
 
 step "Loading everything"
 hyprctl plugin load "$HOME/.local/lib/bvos/hyprbars.so" >/dev/null 2>&1 || true
+hyprctl plugin load "$HOME/.local/lib/bvos/bvos-snap.so" >/dev/null 2>&1 || true
 hyprctl reload >/dev/null
 omarchy restart shell >/dev/null 2>&1 || true
 
@@ -98,6 +106,7 @@ Blue View OS desktop is installed.
 
   Window buttons   left: minimize, maximize, float   right: close
   Minimized tray   SUPER + M
+  Snap windows     drag to an edge (half), the top (maximize) or a corner (quarter)
   Screensaver      starts after idle.screensaver seconds (~/.config/omarchy/shell.json)
   Live desktop     omarchy-shell bvos-screensaver desktop <on|off>
   Preview it       omarchy-shell bvos-screensaver preview live now

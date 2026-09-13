@@ -5,6 +5,9 @@
 -- Minimize, maximize and float dots sit on the left; close is on the far right.
 -- The hyprbars plugin is built by `bvos-hyprbars-build` (rebuilt after each
 -- `omarchy update` by the post-update hook) and loaded at login.
+--
+-- Window snapping, like Windows: drag a window to a screen edge or corner and
+-- let go. Built by `bvos-snap-build`, rebuilt and loaded the same way.
 
 -- Glass needs blur behind translucent surfaces (Omarchy ships with it off).
 hl.config({
@@ -20,9 +23,24 @@ hl.config({
 })
 
 o.exec_on_start("hyprctl plugin load " .. os.getenv("HOME") .. "/.local/lib/bvos/hyprbars.so")
+o.exec_on_start("hyprctl plugin load " .. os.getenv("HOME") .. "/.local/lib/bvos/bvos-snap.so")
 
 -- Restore minimized windows: SUPER + M shows the tray.
 o.bind("SUPER + M", "Show minimized windows", hl.dsp.workspace.toggle_special("minimized"))
+
+-- Snap preview: clear glass with a faint brand-blue tint.
+if hl.plugin and hl.plugin.bvos_snap ~= nil then
+  hl.config({
+    plugin = {
+      bvos_snap = {
+        enabled = true,
+        edge = 6,         -- pixels from a screen edge that snap
+        corner = 120,     -- pixels along an edge that count as a corner
+        preview_color = "rgba(38b6ff14)",
+      },
+    },
+  })
+end
 
 local bars = hl.plugin and hl.plugin.hyprbars
 if not bars then

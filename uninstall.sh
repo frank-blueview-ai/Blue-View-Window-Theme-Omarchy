@@ -7,12 +7,15 @@
 set -uo pipefail
 
 hyprctl plugin unload "$HOME/.local/lib/bvos/hyprbars.so" >/dev/null 2>&1
+hyprctl plugin unload "$HOME/.local/lib/bvos/bvos-snap.so" >/dev/null 2>&1
 
 sed -i '/-- Blue View OS glass title bars and window buttons./d; /require("hypr.bvos-windows")/d' "$HOME/.config/hypr/hyprland.lua"
 rm -f "$HOME/.config/hypr/bvos-windows.lua" \
   "$HOME/.local/bin/bvos-window-minimize" \
   "$HOME/.local/bin/bvos-hyprbars-build" \
-  "$HOME/.config/omarchy/hooks/post-update.d/bvos-hyprbars"
+  "$HOME/.local/bin/bvos-snap-build" \
+  "$HOME/.config/omarchy/hooks/post-update.d/bvos-hyprbars" \
+  "$HOME/.config/omarchy/hooks/post-update.d/bvos-snap"
 rm -rf "$HOME/.local/lib/bvos" "$HOME/.local/share/bvos" "$HOME/.config/omarchy/plugins/bvos.screensaver"
 
 shell_json="$HOME/.config/omarchy/shell.json"
