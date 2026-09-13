@@ -43,3 +43,9 @@ Satellite orbital elements (fetched at runtime): CelesTrak (https://celestrak.or
 Weather data (fetched at runtime): wttr.in and Open-Meteo (https://open-meteo.com,
   CC BY 4.0 data). The Windows package finds its location with GeoJS
   (https://www.geojs.io) unless a place is set.
+
+Windows 11 theme (windows/theme): the installer downloads and sets up these
+separate programs, which are not included and keep their own licenses:
+  Mica For Everyone (GPL-3.0), TranslucentTB (GPL-3.0), Windhawk (GPL-3.0),
+  and the Windhawk mod "Hide Titlebar Icon and Text" by darkthemer (MIT),
+  fetched from mods.windhawk.net.

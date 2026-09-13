@@ -50,7 +50,10 @@ The same living sky is your desktop background and your screensaver. It's dark o
 
 ## On Windows
 
-The live sky also runs on Windows 10 and 11 as a desktop background and screensaver, through the free [Lively Wallpaper](https://www.rocksdanister.com/lively) app. See [windows/README.md](windows/README.md).
+- **Blue View OS theme for Windows 11:** the sky wallpapers, dark mode and Blue View colors, glass windows, a glass taskbar and clean title bars, set up by one installer script.
+- **Blue View OS Sky:** the live sky as a desktop background and screensaver on Windows 10 and 11, through the free [Lively Wallpaper](https://www.rocksdanister.com/lively) app.
+
+See [windows/README.md](windows/README.md).
 
 ## Requirements
 
@@ -101,7 +104,7 @@ omarchy/plugins/     bvos.screensaver: Quickshell service, sky shader (sky.glsl)
                      (Astro.js), stars, satellites (SGP4), weather
 omarchy/themes/      blue-view-os theme
 web/                 the same sky as a web page (WebGL 2), built from the Omarchy plugin sources
-windows/             Lively Wallpaper package for Windows
+windows/             Windows 11 theme (installer, wallpapers, app settings) and the Lively Wallpaper package
 ```
 
 ## Uninstall

@@ -1,0 +1,23 @@
+{
+  "rules": [
+    {
+      "type": "global",
+      "titleBarColor": "Dark",
+      "backdropPreference": "Acrylic",
+      "cornerPreference": "Default",
+      "extendFrameIntoClientArea": false,
+      "enableBlurBehind": false
+    },
+    { "type": "process", "processName": "explorer" },
+    { "type": "process", "processName": "notepad" },
+    { "type": "process", "processName": "chrome" },
+    { "type": "process", "processName": "msedge" },
+    { "type": "process", "processName": "firefox" },
+    { "type": "process", "processName": "Code" },
+    { "type": "process", "processName": "Discord" },
+    { "type": "process", "processName": "ms-teams" },
+    { "type": "process", "processName": "steam" },
+    { "type": "process", "processName": "vlc" }
+  ],
+  "telemetryEnabled": false
+}

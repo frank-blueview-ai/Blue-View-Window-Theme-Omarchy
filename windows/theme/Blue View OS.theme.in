@@ -1,0 +1,46 @@
+; Blue View OS for Windows 11
+; Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+; Licensed under the PolyForm Noncommercial License 1.0.0.
+;
+; Template: install.ps1 fills in {{WALLPAPERS}} with the folder the wallpapers
+; were copied to, because a loose .theme file needs absolute paths.
+
+[Theme]
+DisplayName=Blue View OS
+SetLogonBackground=0
+
+[Control Panel\Desktop]
+Wallpaper={{WALLPAPERS}}\1-Blue-View-Day.jpg
+TileWallpaper=0
+WallpaperStyle=10
+Pattern=
+
+; The sky through the day: a new wallpaper every 3 hours.
+[Slideshow]
+Interval=10800000
+Shuffle=0
+ImagesRootPath={{WALLPAPERS}}
+Item0Path={{WALLPAPERS}}\1-Blue-View-Day.jpg
+Item1Path={{WALLPAPERS}}\2-Blue-View-Golden-Hour.jpg
+Item2Path={{WALLPAPERS}}\3-Blue-View-Dusk.jpg
+Item3Path={{WALLPAPERS}}\4-Blue-View-Night.jpg
+
+[VisualStyles]
+Path=%SystemRoot%\resources\Themes\Aero\Aero.msstyles
+ColorStyle=NormalColor
+Size=NormalSize
+AutoColorization=0
+; The logo's blue, #38b6ff, as the accent color.
+ColorizationColor=0XC438B6FF
+SystemMode=Dark
+AppMode=Dark
+VisualStyleVersion=10
+
+[boot]
+SCRNSAVE.EXE=
+
+[MasterThemeSelector]
+MTSM=RJSPBS
+
+[Sounds]
+SchemeName=@%SystemRoot%\System32\mmres.dll,-800
