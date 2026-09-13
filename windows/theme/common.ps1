@@ -26,6 +26,11 @@ $script:MicaForEveryone = @{
 $script:Windhawk = @{
     Id            = 'RamenSoftware.Windhawk'
 }
+$script:Tiling = @{
+    Exe           = Join-Path $script:InstallDir 'BlueViewTiling.exe'
+    ProcessName   = 'BlueViewTiling'
+    RunValue      = 'BlueViewOS-Tiling'
+}
 
 function Write-Step([string]$Message) {
     Write-Host ''

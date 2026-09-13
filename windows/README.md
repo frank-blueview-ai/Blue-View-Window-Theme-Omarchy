@@ -13,6 +13,7 @@ The Blue View OS look on Windows 10 and 11, in two parts you can use together or
 | Glass windows | Frosted glass behind app windows and dark title bars | [Mica For Everyone](https://github.com/MicaForEveryone/MicaForEveryone) (free, open source) |
 | Glass taskbar | A clear taskbar over the desktop that turns to faint glass when windows are open | [TranslucentTB](https://github.com/TranslucentTB/TranslucentTB) (free, open source) |
 | Clean title bars | Title bars without the app icon and title text | [Windhawk](https://windhawk.net) with the "Hide Titlebar Icon and Text" mod (free) |
+| Window tiling | **Win + Shift + T** arranges every window on the screen in an even grid; press it again to put them back. Drag a tiled window onto another (a faint glass outline marks it) to swap the two. | A small Blue View helper in the tray, built on your PC during install |
 
 The installer uses Windows' own `winget` to install the three apps and sets them up for you.
 
@@ -33,7 +34,7 @@ At the end the installer prints a summary of which parts worked. Apps that were 
 | Option | What it does |
 | --- | --- |
 | `-ThemeOnly` | Only the wallpapers, dark mode and colors; no extra apps |
-| `-NoGlassWindows`, `-NoGlassTaskbar`, `-NoTitleBars` | Skip a part |
+| `-NoGlassWindows`, `-NoGlassTaskbar`, `-NoTitleBars`, `-NoTiling` | Skip a part |
 | `-KeepTitleText` | Hide title bar icons but keep window titles |
 
 **Just the wallpapers and colors?** Download **Blue-View-OS.deskthemepack** instead and double-click it.
@@ -46,13 +47,14 @@ From the same folder:
 powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 ```
 
-It switches back to the standard Windows dark theme and removes the three apps. Add `-KeepApps` to keep the apps installed, or `-KeepWindhawk` to keep Windhawk for your other mods.
+It switches back to the standard Windows dark theme, stops the tiling helper, and removes the three apps. Add `-KeepApps` to keep the apps installed, or `-KeepWindhawk` to keep Windhawk for your other mods.
 
 ### Limits
 
 - **Title bar buttons stay on the right.** Windows draws minimize, maximize and close itself, and no tool can move them to the left like on Omarchy.
 - **Some apps draw their own title bars** (Chrome, Edge, VS Code, Discord, Teams and others), so they don't get glass or clean title bars. The theme leaves these apps alone on purpose, along with File Explorer, where glass has known bugs.
 - Windows already snaps windows to edges and corners, and shows tooltips on the title bar buttons.
+- Tiling works on standard app windows. Windows of apps running as administrator can't be moved by it, and minimized windows are left alone.
 
 ## Blue View OS Sky (live wallpaper)
 

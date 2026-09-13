@@ -52,7 +52,7 @@ The same living sky is your desktop background and your screensaver. It's dark o
 
 ## On Windows
 
-- **Blue View OS theme for Windows 11:** the sky wallpapers, dark mode and Blue View colors, glass windows, a glass taskbar and clean title bars, set up by one installer script.
+- **Blue View OS theme for Windows 11:** the sky wallpapers, dark mode and Blue View colors, glass windows, a glass taskbar, clean title bars and Win + Shift + T tiling, set up by one installer script.
 - **Blue View OS Sky:** the live sky as a desktop background and screensaver on Windows 10 and 11, through the free [Lively Wallpaper](https://www.rocksdanister.com/lively) app.
 
 See [windows/README.md](windows/README.md).

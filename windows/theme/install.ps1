@@ -8,11 +8,12 @@
 #   Glass windows   frosted glass and dark title bars (Mica For Everyone)
 #   Glass taskbar   a nearly invisible taskbar (TranslucentTB)
 #   Title bars      clean title bars without icon or text (Windhawk mod)
+#   Tiling          Win+Shift+T tiles all windows; drag a tile onto another to swap
 #
 # Usage, in PowerShell from this folder:
 #   powershell -ExecutionPolicy Bypass -File .\install.ps1
 #   ... -ThemeOnly             only the wallpapers, dark mode and colors
-#   ... -NoGlassWindows -NoGlassTaskbar -NoTitleBars   skip any part
+#   ... -NoGlassWindows -NoGlassTaskbar -NoTitleBars -NoTiling   skip any part
 #   ... -KeepTitleText         hide title bar icons but keep window titles
 
 [CmdletBinding()]
@@ -21,6 +22,7 @@ param(
     [switch]$NoGlassWindows,
     [switch]$NoGlassTaskbar,
     [switch]$NoTitleBars,
+    [switch]$NoTiling,
     [switch]$KeepTitleText
 )
 
@@ -117,6 +119,38 @@ function Install-TitleBars {
     return $true
 }
 
+function Install-Tiling {
+    Write-Step 'Installing window tiling (Win+Shift+T)'
+
+    # Built on this PC from its source with the C# compiler that comes with Windows.
+    $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+    if (-not (Test-Path $csc)) {
+        $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'
+    }
+    if (-not (Test-Path $csc)) {
+        Write-Problem 'The .NET Framework C# compiler was not found.'
+        return $false
+    }
+
+    Get-Process -Name $Tiling.ProcessName -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+
+    $source = Join-Path $PSScriptRoot 'tiling\BlueViewTiling.cs'
+    $ErrorActionPreference = 'Continue'
+    & $csc /nologo /target:winexe /optimize+ "/out:$($Tiling.Exe)" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll $source | Out-Host
+    $ErrorActionPreference = 'Stop'
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $Tiling.Exe)) {
+        Write-Problem 'Building the tiling helper failed.'
+        return $false
+    }
+
+    Set-RegistryValue 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' $Tiling.RunValue "`"$($Tiling.Exe)`"" 'String'
+    Start-Process -FilePath $Tiling.Exe
+    Write-Note 'Running in the tray and starts with Windows. Win+Shift+T tiles the windows on the screen under the pointer.'
+    return $true
+}
+
 function Invoke-Part([string]$Name, [scriptblock]$Action) {
     try {
         $results[$Name] = [bool](& $Action | Select-Object -Last 1)
@@ -132,6 +166,7 @@ Write-Host 'Blue View OS for Windows 11' -ForegroundColor White
 Assert-Windows11
 
 Invoke-Part 'Theme pack' { Install-ThemePack }
+if (-not $ThemeOnly -and -not $NoTiling) { Invoke-Part 'Window tiling' { Install-Tiling } }
 
 if (-not $ThemeOnly) {
     if (-not (Test-Winget)) {

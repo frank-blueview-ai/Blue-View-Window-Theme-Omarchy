@@ -49,6 +49,7 @@ rm -rf "$THEME_PACKAGE"
 mkdir -p "$THEME_PACKAGE/wallpapers"
 cp "$THEME_SRC"/{install.ps1,uninstall.ps1,common.ps1,windhawk-mod.ps1,mica-for-everyone.json,translucenttb.json} "$THEME_PACKAGE/"
 cp "$THEME_SRC/Blue View OS.theme.in" "$THEME_PACKAGE/"
+mkdir -p "$THEME_PACKAGE/tiling" && cp "$THEME_SRC/tiling/BlueViewTiling.cs" "$THEME_PACKAGE/tiling/"
 cp "$THEME_SRC"/wallpapers/*.jpg "$THEME_PACKAGE/wallpapers/"
 cp "$ROOT/windows/README.md" "$ROOT/LICENSE" "$ROOT/NOTICE" "$THEME_PACKAGE/"
 

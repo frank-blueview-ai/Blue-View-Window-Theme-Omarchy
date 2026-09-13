@@ -32,6 +32,12 @@ Invoke-Quietly 'Theme' {
     Send-ColorSettingChange
 }
 
+Write-Step 'Removing window tiling'
+Invoke-Quietly 'Tiling' {
+    Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name $Tiling.RunValue -ErrorAction SilentlyContinue
+    Get-Process -Name $Tiling.ProcessName -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+}
+
 Write-Step 'Removing clean title bars'
 Invoke-Quietly 'Title bars' {
     if (Test-WingetPackage $Windhawk.Id) {
