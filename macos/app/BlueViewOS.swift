@@ -57,13 +57,23 @@ struct AXWindow: Equatable {
 
     static func == (a: AXWindow, b: AXWindow) -> Bool { CFEqual(a.element, b.element) }
 
-    private func value<T>(_ attribute: String, _ type: AXValueType, _ empty: T) -> T {
+    private func axValue(_ attribute: String) -> AXValue? {
         var raw: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, attribute as CFString, &raw) == .success, let raw,
-              CFGetTypeID(raw) == AXValueGetTypeID() else { return empty }
-        var result = empty
-        AXValueGetValue(raw as! AXValue, type, &result)
-        return result
+              CFGetTypeID(raw) == AXValueGetTypeID() else { return nil }
+        return (raw as! AXValue)
+    }
+
+    private var position: CGPoint {
+        var point = CGPoint.zero
+        if let value = axValue(kAXPositionAttribute) { AXValueGetValue(value, .cgPoint, &point) }
+        return point
+    }
+
+    private var size: CGSize {
+        var size = CGSize.zero
+        if let value = axValue(kAXSizeAttribute) { AXValueGetValue(value, .cgSize, &size) }
+        return size
     }
 
     private func flag(_ attribute: String) -> Bool {
@@ -74,9 +84,7 @@ struct AXWindow: Equatable {
 
     /// Frame in AppKit coordinates.
     var frame: CGRect {
-        let origin = value(kAXPositionAttribute, .cgPoint, CGPoint.zero)
-        let size = value(kAXSizeAttribute, .cgSize, CGSize.zero)
-        return Coordinates.fromAX(CGRect(origin: origin, size: size))
+        Coordinates.fromAX(CGRect(origin: position, size: size))
     }
 
     var isTileable: Bool {
