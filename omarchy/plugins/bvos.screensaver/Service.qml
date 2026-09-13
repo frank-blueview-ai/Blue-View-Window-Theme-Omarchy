@@ -237,20 +237,25 @@ Item {
     root.clockMinutes = root.minutesNow()
     root.active = true
     root.refreshWeather()
-    Quickshell.execDetached(["hyprctl", "eval", "hl.config({ cursor = { invisible = true } })"])
+    root.setCursorHidden(true)
+  }
+
+  function setCursorHidden(hidden) {
+    Quickshell.execDetached(["hyprctl", "eval", "hl.config({ cursor = { invisible = " + hidden + " } })"])
   }
 
   function dismiss(reason) {
     if (!root.active || root.closing) return
     if ((root.stillMode || root.demoMode) && reason !== "ipc") return
     console.log("bvos.screensaver dismiss: " + reason)
-    // Showing a fullscreen surface can itself look like activity; ignore it.
-    if (Date.now() - root.startedAt < 1200) return
+    // Showing a fullscreen surface can itself look like activity; ignore it,
+    // but check again once the grace period ends so real activity still wakes.
+    if (Date.now() - root.startedAt < 1200) { graceTimer.restart(); return }
     root.closing = true
     root.stillMode = false
     root.demoMode = false
     closeTimer.restart()
-    Quickshell.execDetached(["hyprctl", "eval", "hl.config({ cursor = { invisible = false } })"])
+    root.setCursorHidden(false)
   }
 
   FileView {
@@ -299,7 +304,9 @@ Item {
   }
 
   // Fetch once at startup so the forecast is ready the first time; refresh while showing.
-  Component.onCompleted: weatherProc.running = true
+  // Also bring the pointer back in case the shell restarted mid-screensaver.
+  Component.onCompleted: { weatherProc.running = true; root.setCursorHidden(false) }
+  Component.onDestruction: root.setCursorHidden(false)
 
   Timer {
     running: root.active || root.desktopEnabled
@@ -314,6 +321,12 @@ Item {
     interval: 5000
     triggeredOnStart: true
     onTriggered: { root.clockMinutes = root.minutesNow(); root.updateSky() }
+  }
+
+  Timer {
+    id: graceTimer
+    interval: 1300
+    onTriggered: if (root.active && !idleMonitor.isIdle) root.dismiss("activity")
   }
 
   Timer {
