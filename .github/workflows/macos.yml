@@ -1,0 +1,102 @@
+# Blue View OS for macOS: build, sign and notarize.
+#
+# Copyright (c) 2026 The Blue View Group Corporation. Author: Frank Perez <frank@blueview.ai>
+# Licensed under the PolyForm Noncommercial License 1.0.0.
+#
+# Signing and notarization run when these repository secrets are set
+# (Settings → Secrets and variables → Actions); otherwise the build is ad-hoc signed.
+#   DEVID_P12_BASE64     Developer ID Application certificate (.p12), base64
+#   DEVID_P12_PASSWORD   its export password
+#   DEVID_NAME           e.g. "Developer ID Application: Frank Perez (TEAMID)"
+#   ASC_KEY_P8_BASE64    App Store Connect API key (.p8), base64
+#   ASC_KEY_ID           its Key ID
+#   ASC_ISSUER_ID        its Issuer ID
+
+name: macOS
+
+on:
+  push:
+    paths: ["macos/**", "web/**", "omarchy/plugins/bvos.screensaver/**", ".github/workflows/macos.yml"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Upload the zip to this existing release (optional)"
+        required: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import the Developer ID certificate
+        id: sign
+        env:
+          DEVID_P12_BASE64: ${{ secrets.DEVID_P12_BASE64 }}
+          DEVID_P12_PASSWORD: ${{ secrets.DEVID_P12_PASSWORD }}
+          DEVID_NAME: ${{ secrets.DEVID_NAME }}
+        run: |
+          if [ -z "$DEVID_P12_BASE64" ]; then
+            echo "No signing certificate configured; building ad-hoc signed."
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          echo "$DEVID_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/devid.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/devid.p12" -P "$DEVID_P12_PASSWORD" -f pkcs12 -k "$KEYCHAIN" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/devid.p12"
+          echo "identity=$DEVID_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
+        run: macos/build.sh
+
+      - name: Notarize
+        env:
+          HAS_IDENTITY: ${{ steps.sign.outputs.identity }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          if [ -z "$HAS_IDENTITY" ] || [ -z "$ASC_KEY_P8_BASE64" ]; then
+            echo "Not notarizing: signing certificate or App Store Connect key not configured."
+            exit 0
+          fi
+          echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/asc.p8"
+          xcrun notarytool submit dist/Blue-View-OS-macOS.zip --key "$RUNNER_TEMP/asc.p8" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" --wait
+          rm -f "$RUNNER_TEMP/asc.p8"
+          # Staple the tickets into the bundles, then zip again.
+          PACKAGE="dist/macos/Blue View OS"
+          xcrun stapler staple "$PACKAGE/Blue View OS.app"
+          xcrun stapler staple "$PACKAGE/Blue View Sky.saver"
+          spctl -a -vvv -t exec "$PACKAGE/Blue View OS.app"
+          rm -f dist/Blue-View-OS-macOS.zip
+          ditto -c -k --keepParent "$PACKAGE" dist/Blue-View-OS-macOS.zip
+
+      - name: Check the bundles
+        run: |
+          PACKAGE="dist/macos/Blue View OS"
+          file "$PACKAGE/Blue View OS.app/Contents/MacOS/BlueViewOS" "$PACKAGE/Blue View Sky.saver/Contents/MacOS/BlueViewSky"
+          codesign -dvv "$PACKAGE/Blue View OS.app" 2>&1 | grep -E "Identifier|Authority|TeamIdentifier|Signature"
+          plutil -lint "$PACKAGE/Blue View OS.app/Contents/Info.plist" "$PACKAGE/Blue View Sky.saver/Contents/Info.plist"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Blue-View-OS-macOS
+          path: dist/Blue-View-OS-macOS.zip
+
+      - name: Upload to release
+        if: ${{ github.event.inputs.release_tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.inputs.release_tag }}" dist/Blue-View-OS-macOS.zip --clobber
+
+      - name: Remove the signing keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true

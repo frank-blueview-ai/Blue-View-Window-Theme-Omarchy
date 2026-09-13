@@ -9,7 +9,9 @@
 "use strict"
 
 const sky = (() => {
-  const params = new URLSearchParams(location.search)
+  // Settings come from the page address, or from a native wrapper (the macOS app and
+  // screensaver) that sets window.BVOS_QUERY before the page loads.
+  const params = new URLSearchParams(window.BVOS_QUERY || location.search)
   const flag = (name, fallback) => params.has(name) ? /^(1|true|on|yes)$/i.test(params.get(name)) : fallback
 
   const settings = {

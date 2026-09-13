@@ -15,10 +15,11 @@ PLUGIN="$ROOT/omarchy/plugins/bvos.screensaver"
 OUT="${1:-$ROOT/dist/web}"
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/bvos/web-build"
 
-declare -A FONTS=(
-  [Geist-Variable.ttf]="https://github.com/google/fonts/raw/main/ofl/geist/Geist%5Bwght%5D.ttf"
-  [Manrope-Variable.ttf]="https://github.com/google/fonts/raw/main/ofl/manrope/Manrope%5Bwght%5D.ttf"
-  [weathericons-regular-webfont.woff2]="https://github.com/erikflowers/weather-icons/raw/master/font/weathericons-regular-webfont.woff2"
+# "file url" pairs (plain lists, so this also runs on macOS's bash 3.2)
+FONTS=(
+  "Geist-Variable.ttf https://github.com/google/fonts/raw/main/ofl/geist/Geist%5Bwght%5D.ttf"
+  "Manrope-Variable.ttf https://github.com/google/fonts/raw/main/ofl/manrope/Manrope%5Bwght%5D.ttf"
+  "weathericons-regular-webfont.woff2 https://github.com/erikflowers/weather-icons/raw/master/font/weathericons-regular-webfont.woff2"
 )
 
 rm -rf "$OUT"
@@ -28,9 +29,11 @@ cp "$ROOT"/web/{index.html,style.css,app.js,weather.js,sky-gl.js,stars.js,satell
 cp "$PLUGIN/blueview-logo.svg" "$OUT/"
 cp "$PLUGIN/LICENSE.satellite-js" "$PLUGIN/LICENSE.d3-celestial" "$ROOT/LICENSE" "$ROOT/NOTICE" "$OUT/"
 
-for name in "${!FONTS[@]}"; do
+for font in "${FONTS[@]}"; do
+  name=${font%% *}
+  url=${font#* }
   if [[ ! -s $CACHE/$name ]]; then
-    curl -fsSL "${FONTS[$name]}" -o "$CACHE/$name.new" && mv "$CACHE/$name.new" "$CACHE/$name"
+    curl -fsSL "$url" -o "$CACHE/$name.new" && mv "$CACHE/$name.new" "$CACHE/$name"
   fi
   cp "$CACHE/$name" "$OUT/fonts/"
 done
