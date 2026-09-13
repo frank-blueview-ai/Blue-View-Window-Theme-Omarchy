@@ -5,14 +5,14 @@
 #
 # Uses the headers shipped by the hyprland package, checks out the upstream
 # hyprland-plugins commit pinned for that exact Hyprland commit, applies the
-# BVOS per-button alignment patch, and installs the plugin. No sudo needed.
+# BVOS patches (per-button alignment, tooltips), and installs the plugin. No sudo needed.
 # The new build is picked up on next login (or run with --load to load now).
 
 set -euo pipefail
 
 BVOS_DIR="$HOME/.local/share/bvos"
 REPO="$BVOS_DIR/hyprland-plugins"
-PATCH="$BVOS_DIR/hyprbars-button-align.patch"
+PATCH="$BVOS_DIR/hyprbars-bvos.patch"
 LIB_DIR="$HOME/.local/lib/bvos"
 PLUGIN="$LIB_DIR/hyprbars.so"
 STAMP="$LIB_DIR/hyprbars.hyprland-commit"

@@ -1,0 +1,465 @@
+From b6cdeae3d80ad05765a0281b8a659e5ea454889b Mon Sep 17 00:00:00 2001
+From: Blue View OS <frank@blueview.ai>
+Date: Sat, 12 Sep 2026 18:11:21 -0400
+Subject: [PATCH 1/2] hyprbars: per-button align (BVOS); drop commit pins
+
+---
+ hyprbars/barDeco.cpp | 33 +++++++++++++++++++++++----------
+ hyprbars/globals.hpp |  1 +
+ hyprbars/main.cpp    | 16 ++++++++++++++++
+ 3 files changed, 40 insertions(+), 10 deletions(-)
+
+diff --git a/hyprbars/barDeco.cpp b/hyprbars/barDeco.cpp
+index c27653d..c8e89d5 100644
+--- a/hyprbars/barDeco.cpp
++++ b/hyprbars/barDeco.cpp
+@@ -276,13 +276,19 @@ void CHyprBar::handleMovement() {
+     return;
+ }
+ 
++static bool buttonOnRight(const SHyprButton& button, bool defaultRight) {
++    return button.align.empty() ? defaultRight : button.align == "right";
++}
++
+ bool CHyprBar::doButtonPress(Config::INTEGER barPadding, Config::INTEGER barButtonPadding, Config::INTEGER barHeight, Vector2D COORDS, const bool BUTTONSRIGHT) {
+     //check if on a button
+-    float offset = barPadding;
++    float offsetLeft = barPadding, offsetRight = barPadding;
+ 
+     for (auto& b : g_pGlobalState->buttons) {
++        const bool RIGHT      = buttonOnRight(b, BUTTONSRIGHT);
++        float&     offset     = RIGHT ? offsetRight : offsetLeft;
+         const auto BARBUF     = Vector2D{(int)assignedBoxGlobal().w, barHeight};
+-        Vector2D   currentPos = Vector2D{(BUTTONSRIGHT ? BARBUF.x - barButtonPadding - b.size - offset : offset), (BARBUF.y - b.size) / 2.0}.floor();
++        Vector2D   currentPos = Vector2D{(RIGHT ? BARBUF.x - barButtonPadding - b.size - offset : offset), (BARBUF.y - b.size) / 2.0}.floor();
+ 
+         if (VECINRECT(COORDS, currentPos.x, currentPos.y, currentPos.x + b.size + barButtonPadding, currentPos.y + b.size)) {
+             // hit on close
+@@ -350,9 +356,11 @@ void CHyprBar::renderBarButtons(CBox* barBox, const float scale, const float a)
+     const auto visibleCount    = getVisibleButtonCount(BARBUTTONPADDING, BARPADDING, Vector2D{barBox->w, barBox->h}, scale);
+     const bool INVALIDATEICONS = m_bButtonsDirty || m_bWindowSizeChanged;
+ 
+-    int        offset = BARPADDING * scale;
++    int        offsetLeft = BARPADDING * scale, offsetRight = BARPADDING * scale;
+     for (size_t i = 0; i < visibleCount; ++i) {
+         auto&      button           = g_pGlobalState->buttons[i];
++        const bool RIGHT            = buttonOnRight(button, BUTTONSRIGHT);
++        int&       offset           = RIGHT ? offsetRight : offsetLeft;
+         const auto scaledButtonSize = button.size * scale;
+         const auto scaledButtonsPad = BARBUTTONPADDING * scale;
+ 
+@@ -366,7 +374,7 @@ void CHyprBar::renderBarButtons(CBox* barBox, const float scale, const float a)
+ 
+         color.a *= a;
+ 
+-        CBox buttonBox = {barBox->x + (BUTTONSRIGHT ? barBox->w - offset - scaledButtonSize : offset), barBox->y + (barBox->h - scaledButtonSize) / 2.0, scaledButtonSize,
++        CBox buttonBox = {barBox->x + (RIGHT ? barBox->w - offset - scaledButtonSize : offset), barBox->y + (barBox->h - scaledButtonSize) / 2.0, scaledButtonSize,
+                           scaledButtonSize};
+         buttonBox.round();
+ 
+@@ -387,17 +395,20 @@ void CHyprBar::renderBarButtonsText(CBox* barBox, const float scale, const float
+     const auto visibleCount = getVisibleButtonCount(BARBUTTONPADDING, BARPADDING, Vector2D{barBox->w, barBox->h}, scale);
+     const auto COORDS       = cursorRelativeToBar();
+ 
+-    int        offset        = BARPADDING * scale;
+-    float      noScaleOffset = BARPADDING;
++    int        offsetLeft = BARPADDING * scale, offsetRight = BARPADDING * scale;
++    float      noScaleOffsetLeft = BARPADDING, noScaleOffsetRight = BARPADDING;
+ 
+     for (size_t i = 0; i < visibleCount; ++i) {
+         auto&      button           = g_pGlobalState->buttons[i];
++        const bool RIGHT            = buttonOnRight(button, BUTTONSRIGHT);
++        int&       offset           = RIGHT ? offsetRight : offsetLeft;
++        float&     noScaleOffset    = RIGHT ? noScaleOffsetRight : noScaleOffsetLeft;
+         const auto scaledButtonSize = button.size * scale;
+         const auto scaledButtonsPad = BARBUTTONPADDING * scale;
+ 
+         // check if hovering here
+         const auto BARBUF     = Vector2D{(int)assignedBoxGlobal().w, HEIGHT};
+-        Vector2D   currentPos = Vector2D{(BUTTONSRIGHT ? BARBUF.x - BARBUTTONPADDING - button.size - noScaleOffset : noScaleOffset), (BARBUF.y - button.size) / 2.0}.floor();
++        Vector2D   currentPos = Vector2D{(RIGHT ? BARBUF.x - BARBUTTONPADDING - button.size - noScaleOffset : noScaleOffset), (BARBUF.y - button.size) / 2.0}.floor();
+         bool       hovering   = VECINRECT(COORDS, currentPos.x, currentPos.y, currentPos.x + button.size + BARBUTTONPADDING, currentPos.y + button.size);
+         noScaleOffset += BARBUTTONPADDING + button.size;
+ 
+@@ -411,7 +422,7 @@ void CHyprBar::renderBarButtonsText(CBox* barBox, const float scale, const float
+         if (!button.iconTex || button.iconTex->m_texID == 0)
+             continue;
+ 
+-        const auto iconX = barBox->x + (BUTTONSRIGHT ? barBox->width - offset - scaledButtonSize / 2.0 : offset + scaledButtonSize / 2.0) - button.iconTex->m_size.x / 2.0;
++        const auto iconX = barBox->x + (RIGHT ? barBox->width - offset - scaledButtonSize / 2.0 : offset + scaledButtonSize / 2.0) - button.iconTex->m_size.x / 2.0;
+         const auto iconY = barBox->y + barBox->height / 2.0 - button.iconTex->m_size.y / 2.0;
+         CBox       pos   = {iconX, iconY, button.iconTex->m_size.x, button.iconTex->m_size.y};
+ 
+@@ -671,13 +682,15 @@ void CHyprBar::damageOnButtonHover() {
+     const auto ALIGNBUTTONS     = g_pGlobalState->config.barButtonsAlignment->value();
+     const bool BUTTONSRIGHT     = ALIGNBUTTONS != "left";
+ 
+-    float      offset = BARPADDING;
++    float      offsetLeft = BARPADDING, offsetRight = BARPADDING;
+ 
+     const auto COORDS = cursorRelativeToBar();
+ 
+     for (auto& b : g_pGlobalState->buttons) {
++        const bool RIGHT      = buttonOnRight(b, BUTTONSRIGHT);
++        float&     offset     = RIGHT ? offsetRight : offsetLeft;
+         const auto BARBUF     = Vector2D{(int)assignedBoxGlobal().w, HEIGHT};
+-        Vector2D   currentPos = Vector2D{(BUTTONSRIGHT ? BARBUF.x - BARBUTTONPADDING - b.size - offset : offset), (BARBUF.y - b.size) / 2.0}.floor();
++        Vector2D   currentPos = Vector2D{(RIGHT ? BARBUF.x - BARBUTTONPADDING - b.size - offset : offset), (BARBUF.y - b.size) / 2.0}.floor();
+ 
+         bool       hover = VECINRECT(COORDS, currentPos.x, currentPos.y, currentPos.x + b.size + BARBUTTONPADDING, currentPos.y + b.size);
+ 
+diff --git a/hyprbars/globals.hpp b/hyprbars/globals.hpp
+index 0ef19ae..47368ba 100644
+--- a/hyprbars/globals.hpp
++++ b/hyprbars/globals.hpp
+@@ -18,6 +18,7 @@ struct SHyprButton {
+     float                size    = 10;
+     std::string          icon    = "";
+     SP<Render::ITexture> iconTex;
++    std::string          align = ""; // "", "left" or "right"; empty follows bar_buttons_alignment
+ };
+ 
+ class CHyprBar;
+diff --git a/hyprbars/main.cpp b/hyprbars/main.cpp
+index ae9c90b..a5966e3 100644
+--- a/hyprbars/main.cpp
++++ b/hyprbars/main.cpp
+@@ -182,6 +182,22 @@ int newLuaButton(lua_State* L) {
+         button.cmd = lua_tostring(L, -1);
+     }
+ 
++    {
++        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
++
++        lua_getfield(L, 1, "align");
++
++        if (!lua_isnil(L, -1)) {
++            if (!lua_isstring(L, -1))
++                return Config::Lua::Bindings::Internal::configError(L, "add_button: align must be \"left\" or \"right\"");
++
++            button.align = lua_tostring(L, -1);
++
++            if (button.align != "left" && button.align != "right")
++                return Config::Lua::Bindings::Internal::configError(L, "add_button: align must be \"left\" or \"right\"");
++        }
++    }
++
+     g_pGlobalState->buttons.push_back(std::move(button));
+ 
+     for (auto& b : g_pGlobalState->bars) {
+-- 
+2.55.0
+
+
+From 8c241587ab4eb0f65aed4d91491760e6a4419f3a Mon Sep 17 00:00:00 2001
+From: Blue View OS <frank@blueview.ai>
+Date: Sun, 13 Sep 2026 00:28:01 -0400
+Subject: [PATCH 2/2] hyprbars: button tooltips; end drags released over layers
+ (BVOS)
+
+---
+ hyprbars/barDeco.cpp | 159 +++++++++++++++++++++++++++++++++++++++++++
+ hyprbars/barDeco.hpp |   1 +
+ hyprbars/globals.hpp |  19 +++++-
+ hyprbars/main.cpp    |  20 ++++++
+ 4 files changed, 198 insertions(+), 1 deletion(-)
+
+diff --git a/hyprbars/barDeco.cpp b/hyprbars/barDeco.cpp
+index c8e89d5..942fae0 100644
+--- a/hyprbars/barDeco.cpp
++++ b/hyprbars/barDeco.cpp
+@@ -20,6 +20,9 @@
+ #include <hyprland/src/protocols/LayerShell.hpp>
+ #include <hyprland/src/event/EventBus.hpp>
+ #include <hyprland/src/layout/LayoutManager.hpp>
++#include <hyprland/src/layout/supplementary/DragController.hpp>
++#include <hyprland/src/render/pass/RectPassElement.hpp>
++#include <hyprland/src/render/pass/TexPassElement.hpp>
+ #include <hyprland/src/render/OpenGL.hpp>
+ #include <hyprland/src/state/MonitorState.hpp>
+ 
+@@ -123,6 +126,13 @@ bool CHyprBar::inputIsValid() {
+ }
+ 
+ void CHyprBar::onMouseButton(Event::SCallbackInfo& info, IPointer::SButtonEvent e) {
++    // A drag this bar started ends on release wherever the pointer is, even over
++    // a layer like the top panel (BVOS: dropping at the top edge to maximize).
++    if (m_bDraggingThis && e.state != WL_POINTER_BUTTON_STATE_PRESSED) {
++        handleUpEvent(info);
++        return;
++    }
++
+     if (!inputIsValid())
+         return;
+ 
+@@ -150,6 +160,8 @@ void CHyprBar::onTouchUp(Event::SCallbackInfo& info, ITouch::SUpEvent e) {
+ }
+ 
+ void CHyprBar::onMouseMove(Vector2D coords) {
++    updateTooltip();
++
+     // ensure proper redraws of button icons on hover when using hardware cursors
+     if (g_pGlobalState->config.iconOnHover->value())
+         damageOnButtonHover();
+@@ -301,6 +313,153 @@ bool CHyprBar::doButtonPress(Config::INTEGER barPadding, Config::INTEGER barButt
+     return false;
+ }
+ 
++// ---- Button tooltips (BVOS) ----
++// Hovering a button for a moment shows what it does in a small glass label
++// below it. Drawn after windows, so it sits on top of the window's content.
++
++static constexpr double TOOLTIP_DELAY_MS = 450.0;
++static constexpr double TOOLTIP_FADE_MS  = 120.0;
++
++static void damageTooltipArea() {
++    const auto& TIP = g_pGlobalState->tooltip;
++    if (!TIP.lastBox.empty())
++        g_pHyprRenderer->damageBox(TIP.lastBox.copy().expand(2));
++    if (!TIP.anchor.empty())
++        g_pHyprRenderer->damageBox(CBox{TIP.anchor.x - 200, TIP.anchor.y, TIP.anchor.w + 400, TIP.anchor.h + 80});
++}
++
++void hideBarTooltip() {
++    auto& tip = g_pGlobalState->tooltip;
++    if (tip.owner.expired())
++        return;
++    damageTooltipArea();
++    tip.owner.reset();
++    tip.lastBox = {};
++}
++
++void CHyprBar::updateTooltip() {
++    auto&      tip   = g_pGlobalState->tooltip;
++    // Bars are uniquely owned, so compare their addresses rather than locking.
++    const bool OWNER = !tip.owner.expired() && tip.owner.get() == this;
++    const auto MOUSE = g_pInputManager->getMouseCoordsInternal();
++    const auto BAR   = assignedBoxGlobal();
++
++    int        hovered = -1;
++    CBox       anchor;
++
++    // Cheap check first: every bar hears every pointer move.
++    if (!m_hidden && validMapped(m_pWindow) && BAR.containsPoint(MOUSE) && g_layoutManager->dragController()->mode() == MBIND_INVALID) {
++        Desktop::CViewHitTester hitTester{*Desktop::viewState()};
++        const auto              WINDOWATCURSOR = hitTester.windowAt(MOUSE, Desktop::View::RESERVED_EXTENTS | Desktop::View::INPUT_EXTENTS | Desktop::View::ALLOW_FLOATING);
++
++        if (WINDOWATCURSOR == m_pWindow.lock()) {
++            const auto BARPADDING       = g_pGlobalState->config.barPadding->value();
++            const auto BARBUTTONPADDING = g_pGlobalState->config.barButtonPadding->value();
++            const auto HEIGHT           = g_pGlobalState->config.barHeight->value();
++            const bool BUTTONSRIGHT     = g_pGlobalState->config.barButtonsAlignment->value() != "left";
++            const auto COORDS           = MOUSE - BAR.pos();
++            float      offsetLeft = BARPADDING, offsetRight = BARPADDING;
++
++            for (size_t i = 0; i < g_pGlobalState->buttons.size(); ++i) {
++                const auto& b          = g_pGlobalState->buttons[i];
++                const bool  RIGHT      = buttonOnRight(b, BUTTONSRIGHT);
++                float&      offset     = RIGHT ? offsetRight : offsetLeft;
++                Vector2D    currentPos = Vector2D{(RIGHT ? BAR.w - BARBUTTONPADDING - b.size - offset : offset), (HEIGHT - b.size) / 2.0}.floor();
++
++                if (VECINRECT(COORDS, currentPos.x, currentPos.y, currentPos.x + b.size + BARBUTTONPADDING, currentPos.y + b.size)) {
++                    hovered = i;
++                    anchor  = CBox{BAR.pos() + currentPos, Vector2D{b.size, b.size}};
++                    break;
++                }
++
++                offset += BARBUTTONPADDING + b.size;
++            }
++        }
++    }
++
++    if (hovered >= 0 && !g_pGlobalState->buttons[hovered].tooltip.empty()) {
++        const auto& TEXT = g_pGlobalState->buttons[hovered].tooltip;
++        if (!OWNER || tip.text != TEXT || tip.anchor != anchor) {
++            damageTooltipArea();
++            tip.owner   = m_self;
++            tip.text    = TEXT;
++            tip.anchor  = anchor;
++            tip.since   = Time::steadyNow();
++            tip.lastBox = {};
++            // Start frames so the delay can elapse and the label appear.
++            damageTooltipArea();
++        }
++    } else if (OWNER) {
++        hideBarTooltip();
++    }
++}
++
++void renderBarTooltip() {
++    auto&      tip     = g_pGlobalState->tooltip;
++    const auto MONITOR = g_pHyprRenderer->m_renderData.pMonitor.lock();
++    if (tip.owner.expired() || tip.text.empty() || !MONITOR || !validMapped(tip.owner.get()->getOwner()))
++        return;
++
++    const CBox MON = MONITOR->logicalBox();
++    if (!MON.containsPoint(tip.anchor.middle()))
++        return;
++
++    const double ELAPSED = std::chrono::duration<double, std::milli>(Time::steadyNow() - tip.since).count();
++    if (ELAPSED < TOOLTIP_DELAY_MS) {
++        damageTooltipArea();
++        return;
++    }
++
++    const double A     = std::clamp((ELAPSED - TOOLTIP_DELAY_MS) / TOOLTIP_FADE_MS, 0.0, 1.0);
++    const float  SCALE = MONITOR->m_scale;
++
++    if (!tip.tex || tip.texText != tip.text || tip.texScale != SCALE) {
++        const auto FONT = g_pGlobalState->config.barTextFont->value();
++        tip.tex         = g_pHyprRenderer->renderText(tip.text, CHyprColor{1.0, 1.0, 1.0, 0.92}, std::round(9 * SCALE), false, FONT, 0, 500);
++        tip.texText     = tip.text;
++        tip.texScale    = SCALE;
++    }
++    if (!tip.tex || tip.tex->m_texID == 0)
++        return;
++
++    // Below the button and clear of the pointer arrow, centered on it, kept on screen.
++    const Vector2D TEXT = tip.tex->m_size / SCALE;
++    const Vector2D PAD  = {8, 4};
++    CBox           box{tip.anchor.middle().x - (TEXT.x + PAD.x * 2) / 2.0, tip.anchor.middle().y + 22, TEXT.x + PAD.x * 2, TEXT.y + PAD.y * 2};
++    box.x = std::clamp(box.x, MON.x + 4, std::max(MON.x + 4, MON.x + MON.w - box.w - 4));
++    box.round();
++    tip.lastBox = box;
++
++    CBox local = box.copy().translate(-MONITOR->m_position).scale(SCALE).round();
++
++    // Glass like the bars: blurred, a deep navy tint and a hairline edge.
++    CRectPassElement::SRectData glass;
++    glass.box   = local;
++    glass.color = CHyprColor{0.03, 0.06, 0.12, 0.62 * A};
++    glass.round = std::round(6 * SCALE);
++    glass.blur  = true;
++    glass.blurA = A;
++    g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(glass));
++
++    const double LINE = std::max(1.0, std::round((double)SCALE));
++    const double R    = glass.round;
++    for (const CBox& b : {CBox{local.x + R, local.y, local.w - 2 * R, LINE}, CBox{local.x + R, local.y + local.h - LINE, local.w - 2 * R, LINE}}) {
++        CRectPassElement::SRectData line;
++        line.box   = b;
++        line.color = CHyprColor{1.0, 1.0, 1.0, 0.12 * A};
++        g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(line));
++    }
++
++    CTexPassElement::SRenderData text;
++    text.tex = tip.tex;
++    text.box = CBox{local.x + PAD.x * SCALE, local.y + PAD.y * SCALE, tip.tex->m_size.x, tip.tex->m_size.y}.round();
++    text.a   = A;
++    g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(std::move(text)));
++
++    if (A < 1.0)
++        damageTooltipArea();
++}
++
+ void CHyprBar::renderBarTitle(const Vector2D& bufferSize, const float scale) {
+     const auto COLORVAL         = g_pGlobalState->config.textColor->value();
+     const auto SIZE             = g_pGlobalState->config.barTextSize->value();
+diff --git a/hyprbars/barDeco.hpp b/hyprbars/barDeco.hpp
+index a3b4e2d..5cb66e6 100644
+--- a/hyprbars/barDeco.hpp
++++ b/hyprbars/barDeco.hpp
+@@ -82,6 +82,7 @@ class CHyprBar : public IHyprWindowDecoration {
+     void renderBarButtons(CBox* barBox, const float scale, const float a);
+     void renderBarButtonsText(CBox* barBox, const float scale, const float a);
+     void damageOnButtonHover();
++    void updateTooltip();
+ 
+     bool inputIsValid();
+     void onMouseButton(Event::SCallbackInfo& info, IPointer::SButtonEvent e);
+diff --git a/hyprbars/globals.hpp b/hyprbars/globals.hpp
+index 47368ba..f3ac7a8 100644
+--- a/hyprbars/globals.hpp
++++ b/hyprbars/globals.hpp
+@@ -7,6 +7,7 @@
+ #include <hyprland/src/config/values/types/StringValue.hpp>
+ #include <hyprland/src/config/values/types/ColorValue.hpp>
+ #include <hyprland/src/config/values/types/FontWeightValue.hpp>
++#include <hyprland/src/helpers/time/Time.hpp>
+ 
+ inline HANDLE PHANDLE = nullptr;
+ 
+@@ -18,7 +19,8 @@ struct SHyprButton {
+     float                size    = 10;
+     std::string          icon    = "";
+     SP<Render::ITexture> iconTex;
+-    std::string          align = ""; // "", "left" or "right"; empty follows bar_buttons_alignment
++    std::string          align   = ""; // "", "left" or "right"; empty follows bar_buttons_alignment
++    std::string          tooltip = ""; // shown after hovering the button
+ };
+ 
+ class CHyprBar;
+@@ -30,6 +32,18 @@ struct SGlobalState {
+     uint32_t                  barColorRuleIdx   = 0;
+     uint32_t                  titleColorRuleIdx = 0;
+ 
++    // The one button tooltip on screen, if any.
++    struct {
++        WP<CHyprBar>         owner;
++        std::string          text;
++        CBox                 anchor; // the hovered button, global logical coordinates
++        Time::steady_tp      since;
++        CBox                 lastBox; // where it was last drawn, for damage
++        SP<Render::ITexture> tex;
++        std::string          texText;
++        float                texScale = 0;
++    } tooltip;
++
+     struct {
+         SP<Config::Values::CColorValue>      barColor, textColor, inactiveButtonColor;
+         SP<Config::Values::CIntValue>        barHeight;
+@@ -43,3 +57,6 @@ struct SGlobalState {
+ };
+ 
+ inline UP<SGlobalState> g_pGlobalState;
++
++void hideBarTooltip();
++void renderBarTooltip();
+diff --git a/hyprbars/main.cpp b/hyprbars/main.cpp
+index a5966e3..16564a8 100644
+--- a/hyprbars/main.cpp
++++ b/hyprbars/main.cpp
+@@ -198,6 +198,19 @@ int newLuaButton(lua_State* L) {
+         }
+     }
+ 
++    {
++        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
++
++        lua_getfield(L, 1, "tooltip");
++
++        if (!lua_isnil(L, -1)) {
++            if (!lua_isstring(L, -1))
++                return Config::Lua::Bindings::Internal::configError(L, "add_button: tooltip must be a string");
++
++            button.tooltip = lua_tostring(L, -1);
++        }
++    }
++
+     g_pGlobalState->buttons.push_back(std::move(button));
+ 
+     for (auto& b : g_pGlobalState->bars) {
+@@ -274,6 +287,11 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
+         HyprlandAPI::addLuaFunction(PHANDLE, "hyprbars", "add_button", ::newLuaButton);
+     static auto P4 = Event::bus()->m_events.config.preReload.listen([&] { onPreConfigReload(); });
+     static auto P5 = Event::bus()->m_events.config.reloaded.listen([&] { onConfigReloaded(); });
++    static auto P6 = Event::bus()->m_events.render.stage.listen([](eRenderStage stage) {
++        if (stage == RENDER_POST_WINDOWS)
++            renderBarTooltip();
++    });
++    static auto P7 = Event::bus()->m_events.input.mouse.button.listen([](IPointer::SButtonEvent, Event::SCallbackInfo&) { hideBarTooltip(); });
+ 
+     // add deco to existing windows
+     for (auto& w : Desktop::windowState()->windows()) {
+@@ -293,6 +311,8 @@ APICALL EXPORT void PLUGIN_EXIT() {
+         m->m_scheduledRecalc = true;
+ 
+     g_pHyprRenderer->m_renderPass.removeAllOfType("CBarPassElement");
++    hideBarTooltip();
++    g_pGlobalState->tooltip.tex = nullptr;
+ 
+     Desktop::Rule::windowEffects()->unregisterEffect(g_pGlobalState->barColorRuleIdx);
+     Desktop::Rule::windowEffects()->unregisterEffect(g_pGlobalState->titleColorRuleIdx);
+-- 
+2.55.0
+

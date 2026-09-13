@@ -73,14 +73,15 @@ hl.config({
 })
 
 -- Glass dots: a faint hint of color you can see straight through.
-local function dot(color, icon, action, align)
-  bars.add_button({ bg_color = color, fg_color = "rgba(ffffffb3)", size = 11, icon = icon, action = action, align = align })
+-- Hovering one for a moment shows a tooltip saying what it does.
+local function dot(color, icon, tooltip, action, align)
+  bars.add_button({ bg_color = color, fg_color = "rgba(ffffffb3)", size = 11, icon = icon, tooltip = tooltip, action = action, align = align })
 end
 
 -- Left, like macOS: minimize, maximize, float.
-dot("rgba(febc2e33)", "–", "bvos-window-minimize")
-dot("rgba(28c84033)", "+", [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })']])
-dot("rgba(64b2fc33)", "◇", [[hyprctl dispatch 'hl.dsp.window.float({ action = "toggle" })']])
+dot("rgba(febc2e33)", "–", "Minimize", "bvos-window-minimize")
+dot("rgba(28c84033)", "+", "Maximize", [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })']])
+dot("rgba(64b2fc33)", "◇", "Float", [[hyprctl dispatch 'hl.dsp.window.float({ action = "toggle" })']])
 
 -- Far right: close.
-dot("rgba(ff5f5738)", "×", [[hyprctl dispatch 'hl.dsp.window.close()']], "right")
+dot("rgba(ff5f5738)", "×", "Close", [[hyprctl dispatch 'hl.dsp.window.close()']], "right")

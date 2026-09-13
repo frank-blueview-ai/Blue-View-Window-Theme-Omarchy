@@ -13,8 +13,9 @@ them except to leave the branding in this software unchanged.
 Third-party components
 ----------------------
 
-hyprbars/hyprbars-button-align.patch
-  A patch to the hyprbars plugin from https://github.com/hyprwm/hyprland-plugins.
+hyprbars/hyprbars-bvos.patch
+  Patches to the hyprbars plugin from https://github.com/hyprwm/hyprland-plugins
+  (per-button alignment, button tooltips, and ending drags released over panels).
   hyprland-plugins is Copyright (c) 2023, Hypr Development, licensed under the
   BSD 3-Clause License (see hyprbars/LICENSE.hyprland-plugins). The patch is
   distributed under that same license. The plugin source itself is downloaded

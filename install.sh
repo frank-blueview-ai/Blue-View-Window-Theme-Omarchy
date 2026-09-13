@@ -28,7 +28,7 @@ install -Dm755 "$SRC/bin/bvos-hyprbars-build" "$HOME/.local/bin/bvos-hyprbars-bu
 install -Dm755 "$SRC/bin/bvos-snap-build" "$HOME/.local/bin/bvos-snap-build"
 
 step "Building the title-bar plugin (hyprbars + Blue View OS button alignment)"
-install -Dm644 "$SRC/hyprbars/hyprbars-button-align.patch" "$HOME/.local/share/bvos/hyprbars-button-align.patch"
+install -Dm644 "$SRC/hyprbars/hyprbars-bvos.patch" "$HOME/.local/share/bvos/hyprbars-bvos.patch"
 "$HOME/.local/bin/bvos-hyprbars-build" --force
 
 step "Building the window-snapping plugin"

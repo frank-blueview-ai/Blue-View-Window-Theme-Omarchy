@@ -16,8 +16,9 @@ astronomy, real weather and real wind.
 ### Glass title bars
 - A slim, 20px bar on every window. It's almost fully transparent over a blur, so it takes on the color of your desktop.
 - macOS-style dots on the left for **minimize**, **maximize** and **float**. **Close** sits alone on the far right. Icons only appear when you hover.
+- Hover a dot for a moment and a small glass tooltip says what it does: **Minimize**, **Maximize**, **Float** or **Close**.
 - Double-click a title bar to maximize. Minimized windows go to a tray: **SUPER + M** shows it, and the yellow dot restores a window.
-- The bars come from [hyprbars](https://github.com/hyprwm/hyprland-plugins/tree/main/hyprbars), with a small patch that lets each button sit on either side. The plugin is built against your installed Hyprland headers, so no `hyprpm` or `sudo` is needed. It rebuilds automatically after `omarchy update`.
+- The bars come from [hyprbars](https://github.com/hyprwm/hyprland-plugins/tree/main/hyprbars), with a small patch that lets each button sit on either side and shows tooltips. The plugin is built against your installed Hyprland headers, so no `hyprpm` or `sudo` is needed. It rebuilds automatically after `omarchy update`.
 
 ### Window snapping
 - Drag any window by its title bar, or with **SUPER + drag**, and let go at a screen edge, like on Windows:
