@@ -124,3 +124,15 @@ Copyright (c) 2026 **The Blue View Group Corporation**. Author: **Frank Perez** 
 Licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify and share this software for noncommercial purposes. Commercial use requires a separate license from The Blue View Group Corporation; contact frank@blueview.ai.
 
 "Blue View", "Blue View OS" and the Blue View logo are trademarks of The Blue View Group Corporation. The hyprbars patch keeps its upstream BSD 3-Clause license. See [NOTICE](NOTICE) for third-party details.
+
+## Blue View settings and window opacity
+
+The installer adds the Blue View icon to the Omarchy bar. Click it to open the movable settings window. It controls the live desktop, screensaver, sky time, clock format, Blue View window transparency, desktop window corners and opacity, and taskbar background opacity and monochrome icon/text color. The location is shared with Omarchy Weather. The icon and settings window follow the Blue View light/dark setting.
+
+A ◐ button on the left of the Hyprbars title bar opens an opacity control for that window. Changes normally last for the life of the window; choose **Remember for this application** to apply that opacity to future windows of the same application. **Reset to desktop default** removes the saved application preference and returns that window to the desktop opacity. The control window stays opaque so that it is usable even when the desktop default is very transparent. Shared Quickshell windows cannot have an application-wide saved override.
+
+The user settings are kept under `~/.local/state/bvos/`. Hyprland overrides are stored in `~/.config/hypr/bvos-appearance.lua`, `bvos-opacity-apps.lua`, and `bvos-bar-glass.lua`; the installer creates them only if absent and keeps them on uninstall. Bar color and alpha overrides are kept in `~/.config/omarchy/shell.toml`. Some apps or window rules may override the desktop defaults. Window transparency affects all pixels in application windows, including their text; the Blue View window's separate opacity slider only affects its background.
+
+The **Open BlueView Desktop** action expects the optional `~/.local/bin/bvos-desktop` launcher. The settings window itself does not require that separate app.
+
+Run `python3 tests/install_smoke.py` to exercise installation twice in a temporary home without changing the desktop. The test stubs plugin builds, Omarchy commands, and font downloads; it does not replace graphical testing.

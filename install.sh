@@ -24,6 +24,7 @@ done
 
 step "Installing commands"
 install -Dm755 "$SRC/bin/bvos-window-minimize" "$HOME/.local/bin/bvos-window-minimize"
+install -Dm755 "$SRC/bin/bvos-window-opacity" "$HOME/.local/bin/bvos-window-opacity"
 install -Dm755 "$SRC/bin/bvos-hyprbars-build" "$HOME/.local/bin/bvos-hyprbars-build"
 install -Dm755 "$SRC/bin/bvos-snap-build" "$HOME/.local/bin/bvos-snap-build"
 
@@ -42,6 +43,32 @@ if ! grep -q 'require("hypr.bvos-windows")' "$HOME/.config/hypr/hyprland.lua"; t
   backup "$HOME/.config/hypr/hyprland.lua"
   printf '\n-- Blue View OS glass title bars and window buttons.\nrequire("hypr.bvos-windows")\n' >>"$HOME/.config/hypr/hyprland.lua"
 fi
+
+step "Installing Blue View window and bar settings"
+# FileView watches these paths for changes. Create only missing files so a
+# fresh install sees the first preference update without a shell restart.
+mkdir -p "$HOME/.local/state/bvos" "$HOME/.config/omarchy"
+if [[ ! -e $HOME/.local/state/bvos/display.json ]]; then
+  printf '{}\n' >"$HOME/.local/state/bvos/display.json"
+fi
+if [[ ! -e $HOME/.config/omarchy/shell.toml ]]; then
+  : >"$HOME/.config/omarchy/shell.toml"
+fi
+install -Dm644 "$SRC/hypr/bvos-settings.lua" "$HOME/.config/hypr/bvos-settings.lua"
+for name in bvos-appearance bvos-opacity-apps bvos-bar-glass; do
+  if [[ ! -e $HOME/.config/hypr/$name.lua ]]; then
+    printf '%s\n' "-- Blue View user settings." >"$HOME/.config/hypr/$name.lua"
+  fi
+done
+if ! grep -Fq 'require("hypr.bvos-settings")' "$HOME/.config/hypr/hyprland.lua"; then
+  backup "$HOME/.config/hypr/hyprland.lua"
+  printf '\n-- Blue View settings and appearance.\nrequire("hypr.bvos-settings")\n' >>"$HOME/.config/hypr/hyprland.lua"
+fi
+install -Dm644 "$SRC/omarchy/bar/modules/bvos-desktop.qml" "$HOME/.config/omarchy/bar/modules/bvos-desktop.qml"
+install -Dm644 "$SRC/omarchy/bar/assets/blueview-ovals.svg" "$HOME/.config/omarchy/bar/assets/blueview-ovals.svg"
+install -Dm644 "$SRC/omarchy/bar/assets/blueview-glass-polished.svg" "$HOME/.config/omarchy/bar/assets/blueview-glass-polished.svg"
+mkdir -p "$HOME/.config/omarchy/plugins/bvos.window-opacity"
+cp -r "$SRC/omarchy/plugins/bvos.window-opacity/." "$HOME/.config/omarchy/plugins/bvos.window-opacity/"
 
 step "Installing the update hooks (rebuild the plugins after Hyprland updates)"
 install -Dm755 "$SRC/hooks/post-update.d/bvos-hyprbars" "$HOME/.config/omarchy/hooks/post-update.d/bvos-hyprbars"
@@ -72,11 +99,15 @@ if [[ -x /usr/lib/qt6/bin/qsb ]]; then
 fi
 
 shell_json="$HOME/.config/omarchy/shell.json"
-if [[ -f $shell_json ]] && ! jq -e '.plugins // [] | map(.id) | index("bvos.screensaver")' "$shell_json" >/dev/null; then
+if [[ -f $shell_json ]]; then
   backup "$shell_json"
-  tmp=$(mktemp)
-  jq '.plugins = ((.plugins // []) + [{"id": "bvos.screensaver"}])' "$shell_json" >"$tmp" && cat "$tmp" >"$shell_json"
-  rm -f "$tmp"
+  tmp=$(mktemp "${shell_json}.XXXXXX")
+  jq '
+    .plugins = ((.plugins // []) | if any(.[]; .id == "bvos.screensaver") then . else . + [{"id":"bvos.screensaver"}] end | if any(.[]; .id == "bvos.window-opacity") then . else . + [{"id":"bvos.window-opacity"}] end)
+    | .bar.layout.right = ((.bar.layout.right // []) | if any(.[]; .id == "bvos-desktop") then . else . + [{"id":"bvos-desktop", "type":"qml"}] end)
+  ' "$shell_json" >"$tmp"
+  chmod --reference="$shell_json" "$tmp"
+  mv -f "$tmp" "$shell_json"
 fi
 
 # The Blue View OS screensaver replaces Omarchy's terminal screensaver.
@@ -104,7 +135,8 @@ cat <<'DONE'
 
 Blue View OS desktop is installed.
 
-  Window buttons   left: minimize, maximize, float   right: close
+  Window buttons   left: minimize, maximize, float, opacity   right: close
+  Settings         click the Blue View icon in the bar
   Minimized tray   SUPER + M
   Snap windows     drag to an edge (half), the top (maximize) or a corner (quarter)
   Screensaver      starts after idle.screensaver seconds (~/.config/omarchy/shell.json)

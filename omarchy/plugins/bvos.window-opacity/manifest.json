@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"bvos.window-opacity","name":"Blue View Window Opacity","version":"1.0.0","author":"The Blue View Group Corporation","description":"Adjust opacity of individual windows","kinds":["service"],"entryPoints":{"service":"Service.qml"}}
