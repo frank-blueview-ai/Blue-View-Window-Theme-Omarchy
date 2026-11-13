@@ -45,6 +45,15 @@ if ! grep -q 'require("hypr.bvos-windows")' "$HOME/.config/hypr/hyprland.lua"; t
 fi
 
 step "Installing Blue View window and bar settings"
+# FileView watches these paths for changes. Create only missing files so a
+# fresh install sees the first preference update without a shell restart.
+mkdir -p "$HOME/.local/state/bvos" "$HOME/.config/omarchy"
+if [[ ! -e $HOME/.local/state/bvos/display.json ]]; then
+  printf '{}\n' >"$HOME/.local/state/bvos/display.json"
+fi
+if [[ ! -e $HOME/.config/omarchy/shell.toml ]]; then
+  : >"$HOME/.config/omarchy/shell.toml"
+fi
 install -Dm644 "$SRC/hypr/bvos-settings.lua" "$HOME/.config/hypr/bvos-settings.lua"
 for name in bvos-appearance bvos-opacity-apps bvos-bar-glass; do
   if [[ ! -e $HOME/.config/hypr/$name.lua ]]; then

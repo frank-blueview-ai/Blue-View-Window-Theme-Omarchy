@@ -13,9 +13,11 @@ Panel {
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
   property bool desktopEnabled: false
+  property bool desktopAppAvailable: false
   property bool linesEnabled: false
   property int timeoutSeconds: 150
   property string message: ""
+  property var actionQueue: []
   property string location: "Automatic"
   property string skyTime: "live"
   property string clockFormat: "12"
@@ -61,6 +63,11 @@ Panel {
     }
   }
   Process {
+    command: ["test", "-x", root.home + "/.local/bin/bvos-desktop"]
+    running: true
+    onExited: function(code) { root.desktopAppAvailable = code === 0 }
+  }
+  Process {
     id: desktopStatus
     command: ["omarchy-shell", "bvos-screensaver", "desktop", "status"]
     stdout: StdioCollector { onStreamFinished: root.desktopEnabled = text.trim() === "on" }
@@ -72,9 +79,24 @@ Panel {
   }
   Process {
     id: action
-    onExited: function(code) { root.message = code === 0 ? "" : "Could not apply setting"; root.refresh() }
+    onExited: function(code) {
+      root.message = code === 0 ? "" : "Could not apply setting"
+      if (root.actionQueue.length) Qt.callLater(root.startNextAction)
+      else root.refresh()
+    }
   }
-  function run(args) { if (!action.running) { action.command = args; action.running = true } }
+  function startNextAction() {
+    if (action.running || !root.actionQueue.length) return
+    var queue = root.actionQueue.slice()
+    var args = queue.shift()
+    root.actionQueue = queue
+    action.command = args
+    action.running = true
+  }
+  function run(args) {
+    root.actionQueue = root.actionQueue.concat([args])
+    root.startNextAction()
+  }
   FileView {
     id: config
     path: root.home + "/.config/omarchy/shell.json"
@@ -468,6 +490,7 @@ Panel {
         }
         BrandButton {
           width: parent.width; text: "Open BlueView Desktop"; bordered: true; focusable: true
+          visible: root.desktopAppAvailable
           tooltipText: "Open the BlueView Desktop application"
           onClicked: { root.close(); Quickshell.execDetached([root.home + "/.local/bin/bvos-desktop"]) }
         }

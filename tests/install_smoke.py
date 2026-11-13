@@ -34,8 +34,15 @@ with tempfile.TemporaryDirectory() as tmp:
         path.write_text('#!/bin/sh\nexit 0\n')
         path.chmod(0o755)
     env = dict(os.environ, HOME=str(home), PATH=str(bindir) + ':' + os.environ['PATH'])
-    for _ in range(2):
-        subprocess.run(['bash', str(repo / 'install.sh'), '--no-theme'], env=env, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(['bash', str(repo / 'install.sh'), '--no-theme'], env=env, check=True, stdout=subprocess.DEVNULL)
+    display = home / '.local/state/bvos/display.json'
+    user_shell = shell_dir / 'shell.toml'
+    assert json.loads(display.read_text()) == {} and user_shell.exists()
+    display.write_text('{"panelTheme":"dark"}\n')
+    user_shell.write_text('[font]\nbase-size = 14\n')
+    subprocess.run(['bash', str(repo / 'install.sh'), '--no-theme'], env=env, check=True, stdout=subprocess.DEVNULL)
+    assert json.loads(display.read_text())['panelTheme'] == 'dark'
+    assert user_shell.read_text() == '[font]\nbase-size = 14\n'
     result = json.loads(shell.read_text())
     assert [x['id'] for x in result['plugins']] == ['existing.service', 'bvos.screensaver', 'bvos.window-opacity']
     assert [x['id'] for x in result['bar']['layout']['right']] == ['existing.widget', 'bvos-desktop']
