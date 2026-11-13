@@ -28,10 +28,10 @@ o.exec_on_start("hyprctl plugin load " .. os.getenv("HOME") .. "/.local/lib/bvos
 o.exec_on_start("hyprctl plugin load " .. os.getenv("HOME") .. "/.local/lib/bvos/bvos-snap.so")
 
 -- Restore minimized windows: SUPER + M shows the tray.
-o.bind("SUPER + M", "Show minimized windows", hl.dsp.workspace.toggle_special("minimized"))
+o.rebind("SUPER + M", "Show minimized windows", hl.dsp.workspace.toggle_special("minimized"))
 
 -- Tile every window on the workspace; again to put floating windows back.
-o.bind("SUPER + SHIFT + T", "Tile all windows", function()
+o.rebind("SUPER + SHIFT + T", "Tile all windows", function()
   if hl.plugin and hl.plugin.bvos_snap ~= nil then
     hl.plugin.bvos_snap.tile_all()
   end
@@ -92,6 +92,7 @@ end
 dot("rgba(febc2e33)", "–", "Minimize", "bvos-window-minimize")
 dot("rgba(28c84033)", "+", "Maximize", [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })']])
 dot("rgba(64b2fc33)", "◇", "Float", [[hyprctl dispatch 'hl.dsp.window.float({ action = "toggle" })']])
+dot("rgba(9fc57e55)", "◐", "Window opacity", "bvos-window-opacity")
 
 -- Far right: close.
 dot("rgba(ff5f5738)", "×", "Close", [[hyprctl dispatch 'hl.dsp.window.close()']], "right")

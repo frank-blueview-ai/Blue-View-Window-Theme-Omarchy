@@ -86,8 +86,12 @@ Item {
   // ---- Sky state: time of day and weather, eased so changes glide.
   property string previewCondition: ""
   property real previewHour: -1
+  property string skyTime: "live"
+  property string clockFormat: "12"
+  readonly property real configuredHour: skyTime === "day" ? 12 : skyTime === "sunset" ? 18 : skyTime === "night" ? 23 : -1
+  readonly property real effectiveHour: previewHour >= 0 ? previewHour : configuredHour
   property real clockMinutes: minutesNow()
-  readonly property real nowMinutes: previewHour >= 0 ? previewHour * 60 : clockMinutes
+  readonly property real nowMinutes: effectiveHour >= 0 ? effectiveHour * 60 : clockMinutes
 
   property var sunArc: ({ x: 0, y: 0.7, alt: 0.5 })
   property var moonArc: ({ x: 0, y: -0.2, alt: -1 })
@@ -95,9 +99,9 @@ Item {
   // The moment the sky shows: now, or today at the preview hour.
   function skyDate() {
     var d = new Date()
-    if (root.previewHour >= 0) {
+    if (root.effectiveHour >= 0) {
       d.setHours(0, 0, 0, 0)
-      d.setTime(d.getTime() + root.previewHour * 3600000)
+      d.setTime(d.getTime() + root.effectiveHour * 3600000)
     }
     return d
   }
@@ -254,6 +258,9 @@ Item {
     root.closing = true
     root.stillMode = false
     root.demoMode = false
+    root.previewHour = -1
+    root.previewCondition = ""
+    root.updateSky()
     closeTimer.restart()
     root.setCursorHidden(false)
   }
@@ -264,6 +271,47 @@ Item {
     printErrors: false
     onLoaded: root.readConfig(text())
     onFileChanged: reload()
+  }
+
+  FileView {
+    path: root.home + "/.local/state/bvos/display.json"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: {
+      try {
+        var data = JSON.parse(text())
+        root.skyTime = ["live", "day", "sunset", "night"].indexOf(data.skyTime) >= 0 ? data.skyTime : "live"
+        root.clockFormat = data.clockFormat === "24" ? "24" : "12"
+        root.updateSky()
+      } catch (e) { console.warn("bvos.screensaver: invalid display settings") }
+    }
+  }
+
+  // Keep the sky and forecast in sync with the location shared by Omarchy Weather.
+  property string locationSnapshot: "uninitialized"
+  function locationChanged(value) {
+    if (root.locationSnapshot !== "uninitialized" && root.locationSnapshot !== value) locationRefresh.restart()
+    root.locationSnapshot = value
+  }
+  FileView {
+    id: locationConfig
+    path: root.home + "/.local/state/omarchy/settings/weather.json"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: root.locationChanged(text())
+    onLoadFailed: root.locationChanged("")
+  }
+  Timer { running: true; repeat: true; interval: 10000; onTriggered: locationConfig.reload() }
+  Timer {
+    id: locationRefresh
+    interval: 1000
+    onTriggered: {
+      if (weatherProc.running) { restart(); return }
+      root.weatherFetchedAt = 0
+      root.refreshWeather()
+    }
   }
 
   IdleMonitor {
@@ -532,7 +580,7 @@ Item {
               font.weight: Font.ExtraLight
               font.pixelSize: Math.round(composition.step(4))
               font.letterSpacing: -Math.round(composition.step(4)) * 0.02
-              text: Qt.formatTime(new Date(), "h:mm")
+              text: Qt.formatTime(new Date(), root.clockFormat === "24" ? "HH:mm" : "h:mm")
             }
 
             Item { width: 1; height: composition.step(-1) }
@@ -554,7 +602,7 @@ Item {
               interval: 1000
               onTriggered: {
                 var now = new Date()
-                clock.text = Qt.formatTime(now, "h:mm")
+                clock.text = Qt.formatTime(now, root.clockFormat === "24" ? "HH:mm" : "h:mm")
                 date.text = Qt.formatDate(now, "dddd, MMMM d")
               }
             }
