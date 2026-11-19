@@ -98,12 +98,34 @@ if [[ -x /usr/lib/qt6/bin/qsb ]]; then
   /usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -DCLOUD_PASS -o "$plugin/clouds.frag.qsb" "$plugin/sky.glsl"
 fi
 
+step "Installing the lockable taskbar"
+mkdir -p "$HOME/.config/omarchy/plugins/bvos.bar"
+cp -r "$SRC/omarchy/plugins/bvos.bar/." "$HOME/.config/omarchy/plugins/bvos.bar/"
+
+# Prefer an installed user clone when restoring missing workspace numbers.
+workspace_id="omarchy.workspaces"
+for manifest in "$HOME/.config/omarchy/plugins/"*/manifest.json; do
+  [[ -f $manifest ]] || continue
+  candidate=$(jq -r 'if .omarchy.clonedFrom == "omarchy.workspaces" then .id else empty end' "$manifest")
+  if [[ -n $candidate ]]; then
+    workspace_id="$candidate"
+    break
+  fi
+done
+
 shell_json="$HOME/.config/omarchy/shell.json"
 if [[ -f $shell_json ]]; then
   backup "$shell_json"
   tmp=$(mktemp "${shell_json}.XXXXXX")
-  jq '
+  jq --arg workspace "$workspace_id" '
     .plugins = ((.plugins // []) | if any(.[]; .id == "bvos.screensaver") then . else . + [{"id":"bvos.screensaver"}] end | if any(.[]; .id == "bvos.window-opacity") then . else . + [{"id":"bvos.window-opacity"}] end)
+    | if .bar.id != "bvos.bar" then .bar.blueViewPreviousBar = (.bar.id // "omarchy.bar") else . end
+    | .bar.id = "bvos.bar"
+    | if (.bar | has("layoutLocked")) then . else .bar.layoutLocked = true end
+    | if any((.bar.layout // {})[][]; (.id == $workspace or .id == "omarchy.workspaces" or ((.id // "") | endswith(".workspaces")))) then .
+      else .bar.layout.left = ((.bar.layout.left // []) + [{"id": $workspace}])
+      end
+    | .disabledPlugins = ((.disabledPlugins // []) | map(select(. != "bvos.bar" and . != $workspace)))
     | .bar.layout.right = ((.bar.layout.right // []) | if any(.[]; .id == "bvos-desktop") then . else . + [{"id":"bvos-desktop", "type":"qml"}] end)
   ' "$shell_json" >"$tmp"
   chmod --reference="$shell_json" "$tmp"
@@ -137,6 +159,7 @@ Blue View OS desktop is installed.
 
   Window buttons   left: minimize, maximize, float, opacity   right: close
   Settings         click the Blue View icon in the bar
+  Taskbar lock     click the padlock at the start of the bar to unlock/relock
   Minimized tray   SUPER + M
   Snap windows     drag to an edge (half), the top (maximize) or a corner (quarter)
   Screensaver      starts after idle.screensaver seconds (~/.config/omarchy/shell.json)

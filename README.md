@@ -32,6 +32,12 @@ astronomy, real weather and real wind.
 - **Swap:** drag a tiled window onto another tile (the glass outline marks it) and let go to swap the two.
 - A small plugin built against your installed Hyprland headers, like the title bars, and rebuilt after `omarchy update`.
 
+### Taskbar layout lock
+
+A fixed padlock at the start of the taskbar protects workspace numbers and other widgets from accidental dragging or removal. It starts locked; click to unlock rearranging, then click again to lock. The setting survives restarts, and the padlock cannot itself be dragged away. Ordinary widget clicks, scrolling, and panels continue to work.
+
+Installation preserves your layout, restores workspace numbers if missing, and remembers your previous bar for uninstall. Reinstalling keeps an explicit unlocked setting. See [taskbar details](omarchy/plugins/bvos.bar/README.md).
+
 ### Blue View OS theme
 - Brand navy glass, with the logo's blue (`#38b6ff`) and yellow (`#ffde59`) as accents.
 - Window borders use a subtle blue-to-yellow gradient.
@@ -77,6 +83,7 @@ The script backs up `hyprland.lua` and `shell.json` before editing them.
 
 | What | How |
 | --- | --- |
+| Lock / unlock taskbar layout | Click the padlock at the start of the bar |
 | Minimize / maximize / float | Left dots on the title bar |
 | Close | Right dot on the title bar |
 | Show minimized windows | `SUPER + M` |

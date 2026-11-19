@@ -21,12 +21,14 @@ rm -f "$HOME/.config/hypr/bvos-windows.lua" \
   "$HOME/.local/bin/bvos-snap-build" \
   "$HOME/.config/omarchy/hooks/post-update.d/bvos-hyprbars" \
   "$HOME/.config/omarchy/hooks/post-update.d/bvos-snap"
-rm -rf "$HOME/.local/lib/bvos" "$HOME/.local/share/bvos" "$HOME/.config/omarchy/plugins/bvos.screensaver" "$HOME/.config/omarchy/plugins/bvos.window-opacity"
+rm -rf "$HOME/.local/lib/bvos" "$HOME/.local/share/bvos" "$HOME/.config/omarchy/plugins/bvos.screensaver" "$HOME/.config/omarchy/plugins/bvos.window-opacity" "$HOME/.config/omarchy/plugins/bvos.bar"
 
 shell_json="$HOME/.config/omarchy/shell.json"
 if [[ -f $shell_json ]]; then
   tmp=$(mktemp)
-  jq '.plugins = ((.plugins // []) | map(select(.id != "bvos.screensaver" and .id != "bvos.window-opacity"))) | .bar.layout.right = ((.bar.layout.right // []) | map(select(.id != "bvos-desktop")))' "$shell_json" >"$tmp" && cat "$tmp" >"$shell_json"
+  jq 'if .bar.id == "bvos.bar" then .bar.id = (.bar.blueViewPreviousBar // "omarchy.bar") else . end
+    | del(.bar.blueViewPreviousBar)
+    | .plugins = ((.plugins // []) | map(select(.id != "bvos.screensaver" and .id != "bvos.window-opacity"))) | .bar.layout.right = ((.bar.layout.right // []) | map(select(.id != "bvos-desktop")))' "$shell_json" >"$tmp" && cat "$tmp" >"$shell_json"
   rm -f "$tmp"
 fi
 

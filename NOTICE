@@ -49,3 +49,8 @@ separate programs, which are not included and keep their own licenses:
   Mica For Everyone (GPL-3.0), TranslucentTB (GPL-3.0), Windhawk (GPL-3.0),
   and the Windhawk mod "Hide Titlebar Icon and Text" by darkthemer (MIT),
   fetched from mods.windhawk.net.
+
+omarchy/plugins/bvos.bar
+  Omarchy bar code, Copyright (c) David Heinemeier Hansson, with Blue View
+  layout-lock additions. Distributed under the MIT License, including the
+  additions; see omarchy/plugins/bvos.bar/LICENSE.omarchy.

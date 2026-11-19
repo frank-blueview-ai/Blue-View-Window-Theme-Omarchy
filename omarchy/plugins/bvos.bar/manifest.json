@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "bvos.bar",
+  "name": "Blue View Taskbar",
+  "version": "1.0.0",
+  "author": "Blue View / Omarchy",
+  "description": "Omarchy taskbar with a persistent layout lock",
+  "kinds": [
+    "bar"
+  ],
+  "entryPoints": {
+    "bar": "Bar.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.bar"
+  }
+}
