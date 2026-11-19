@@ -24,7 +24,7 @@ hl.config({
   },
 })
 
-o.exec_on_start("hyprctl plugin load " .. os.getenv("HOME") .. "/.local/lib/bvos/hyprbars.so")
+hl.plugin.load(os.getenv("HOME") .. "/.local/lib/bvos/hyprbars.so")
 o.exec_on_start("hyprctl plugin load " .. os.getenv("HOME") .. "/.local/lib/bvos/bvos-snap.so")
 
 -- Restore minimized windows: SUPER + M shows the tray.

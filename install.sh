@@ -38,10 +38,27 @@ install -Dm644 "$SRC/snap/Makefile" "$HOME/.local/share/bvos/snap/Makefile"
 "$HOME/.local/bin/bvos-snap-build" --force
 
 step "Configuring Hyprland window chrome"
+install -Dm644 "$SRC/hypr/bvos-titlebars.lua" "$HOME/.config/hypr/bvos-titlebars.lua"
 install -Dm644 "$SRC/hypr/bvos-windows.lua" "$HOME/.config/hypr/bvos-windows.lua"
-if ! grep -q 'require("hypr.bvos-windows")' "$HOME/.config/hypr/hyprland.lua"; then
-  backup "$HOME/.config/hypr/hyprland.lua"
-  printf '\n-- Blue View OS glass title bars and window buttons.\nrequire("hypr.bvos-windows")\n' >>"$HOME/.config/hypr/hyprland.lua"
+hypr_config="$HOME/.config/hypr/hyprland.lua"
+if ! grep -Fxq 'require("hypr.bvos-titlebars")' "$hypr_config" ||
+   ! grep -Fq 'require("hypr.bvos-windows")' "$hypr_config" ||
+   ! grep -Fq 'require("hypr.bvos-settings")' "$hypr_config"; then
+  backup "$hypr_config"
+fi
+if ! grep -Fxq 'require("hypr.bvos-titlebars")' "$hypr_config"; then
+  # The workspace modes can load title bars while the saved layouts are read.
+  # Install the override before either entry point into that code.
+  workspace_config="^[[:space:]]*require[[:space:]]*\\(?[[:space:]]*[\"']default\\.hypr\\.(toggles|workspace-layouts|workspace-modes)[\"']"
+  if grep -Eq "$workspace_config" "$hypr_config"; then
+    sed -Ei "0,/$workspace_config/{ //i require(\"hypr.bvos-titlebars\")
+}" "$hypr_config"
+  else
+    printf '\nrequire("hypr.bvos-titlebars")\n' >>"$hypr_config"
+  fi
+fi
+if ! grep -Fq 'require("hypr.bvos-windows")' "$hypr_config"; then
+  printf '\n-- Blue View OS glass title bars and window buttons.\nrequire("hypr.bvos-windows")\n' >>"$hypr_config"
 fi
 
 step "Installing Blue View window and bar settings"
@@ -60,9 +77,8 @@ for name in bvos-appearance bvos-opacity-apps bvos-bar-glass; do
     printf '%s\n' "-- Blue View user settings." >"$HOME/.config/hypr/$name.lua"
   fi
 done
-if ! grep -Fq 'require("hypr.bvos-settings")' "$HOME/.config/hypr/hyprland.lua"; then
-  backup "$HOME/.config/hypr/hyprland.lua"
-  printf '\n-- Blue View settings and appearance.\nrequire("hypr.bvos-settings")\n' >>"$HOME/.config/hypr/hyprland.lua"
+if ! grep -Fq 'require("hypr.bvos-settings")' "$hypr_config"; then
+  printf '\n-- Blue View settings and appearance.\nrequire("hypr.bvos-settings")\n' >>"$hypr_config"
 fi
 install -Dm644 "$SRC/omarchy/bar/modules/bvos-desktop.qml" "$HOME/.config/omarchy/bar/modules/bvos-desktop.qml"
 install -Dm644 "$SRC/omarchy/bar/assets/blueview-ovals.svg" "$HOME/.config/omarchy/bar/assets/blueview-ovals.svg"
@@ -141,7 +157,13 @@ cp -r "$SRC/omarchy/themes/blue-view-os/." "$HOME/.config/omarchy/themes/blue-vi
 (( APPLY_THEME )) && omarchy theme set blue-view-os
 
 step "Loading everything"
-hyprctl plugin load "$HOME/.local/lib/bvos/hyprbars.so" >/dev/null 2>&1 || true
+# Apply the new config, then replace any hyprbars instances from the old
+# session so a previous registration conflict cannot leave the buttons missing.
+titlebars="$HOME/.local/lib/bvos/hyprbars.so"
+hyprctl reload >/dev/null
+hyprctl plugin unload /usr/lib/omarchy-hyprland-titlebars/titlebars.so >/dev/null 2>&1 || true
+hyprctl plugin unload "$titlebars" >/dev/null 2>&1 || true
+hyprctl plugin load "$titlebars" >/dev/null
 hyprctl plugin load "$HOME/.local/lib/bvos/bvos-snap.so" >/dev/null 2>&1 || true
 hyprctl reload >/dev/null
 omarchy restart shell >/dev/null 2>&1 || true

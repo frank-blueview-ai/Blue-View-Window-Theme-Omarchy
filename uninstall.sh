@@ -6,11 +6,12 @@
 
 set -uo pipefail
 
+sed -i '/^require("hypr.bvos-titlebars")$/d; /-- Blue View OS glass title bars and window buttons./d; /require("hypr.bvos-windows")/d; /-- Blue View settings and appearance./d; /require("hypr.bvos-settings")/d' "$HOME/.config/hypr/hyprland.lua"
 hyprctl plugin unload "$HOME/.local/lib/bvos/hyprbars.so" >/dev/null 2>&1
 hyprctl plugin unload "$HOME/.local/lib/bvos/bvos-snap.so" >/dev/null 2>&1
 
-sed -i '/-- Blue View OS glass title bars and window buttons./d; /require("hypr.bvos-windows")/d; /-- Blue View settings and appearance./d; /require("hypr.bvos-settings")/d' "$HOME/.config/hypr/hyprland.lua"
 rm -f "$HOME/.config/hypr/bvos-windows.lua" \
+  "$HOME/.config/hypr/bvos-titlebars.lua" \
   "$HOME/.config/hypr/bvos-settings.lua" \
   "$HOME/.local/bin/bvos-window-opacity" \
   "$HOME/.config/omarchy/bar/modules/bvos-desktop.qml" \

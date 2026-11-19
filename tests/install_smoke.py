@@ -19,7 +19,8 @@ with tempfile.TemporaryDirectory() as tmp:
     bindir = root / 'bin'
     for directory in (shell_dir, hypr, fonts, bindir):
         directory.mkdir(parents=True)
-    (hypr / 'hyprland.lua').write_text('-- existing user config\n')
+    original_config = '-- existing user config\nrequire("default.hypr.toggles")\n'
+    (hypr / 'hyprland.lua').write_text(original_config)
     initial = {'plugins': [{'id': 'existing.service'}], 'bar': {'id': 'existing.bar', 'layout': {'right': [{'id': 'existing.widget'}]}}}
     shell = shell_dir / 'shell.json'
     shell.write_text(json.dumps(initial))
@@ -33,12 +34,23 @@ with tempfile.TemporaryDirectory() as tmp:
         path = bindir / name
         path.write_text('#!/bin/sh\nexit 0\n')
         path.chmod(0o755)
+    (bindir / 'hyprctl').write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$HOME/hyprctl.log"\n')
     for name in ('bvos-hyprbars-build', 'bvos-snap-build'):
         path = repo / 'bin' / name
         path.write_text('#!/bin/sh\nexit 0\n')
         path.chmod(0o755)
     env = dict(os.environ, HOME=str(home), PATH=str(bindir) + ':' + os.environ['PATH'])
     subprocess.run(['bash', str(repo / 'install.sh'), '--no-theme'], env=env, check=True, stdout=subprocess.DEVNULL)
+    first_config = (hypr / 'hyprland.lua').read_text()
+    assert first_config.splitlines()[:3] == [
+        '-- existing user config', 'require("hypr.bvos-titlebars")', 'require("default.hypr.toggles")',
+    ]
+    assert next(hypr.glob('hyprland.lua.bak.*')).read_text() == original_config
+    titlebars = home / '.local/lib/bvos/hyprbars.so'
+    assert (home / 'hyprctl.log').read_text().splitlines()[:4] == [
+        'reload', 'plugin unload /usr/lib/omarchy-hyprland-titlebars/titlebars.so',
+        f'plugin unload {titlebars}', f'plugin load {titlebars}',
+    ]
     first = json.loads(shell.read_text())
     assert first['bar']['id'] == 'bvos.bar'
     assert first['bar']['layoutLocked'] is True
@@ -67,7 +79,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert (shell_dir / 'plugins/bvos.bar/Bar.qml').is_file()
     assert (shell_dir / 'themes/blue-view-os/shell.toml').is_file()
     config = (hypr / 'hyprland.lua').read_text()
+    assert config == first_config
     assert config.count('require("hypr.bvos-settings")') == 1
+    assert (hypr / 'bvos-titlebars.lua').is_file()
     assert (shell_dir / 'plugins/bvos.window-opacity/Service.qml').is_file()
     assert (shell_dir / 'bar/modules/bvos-desktop.qml').is_file()
     assert (home / '.local/bin/bvos-window-opacity').is_file()
@@ -78,5 +92,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert restored['bar']['layout']['right'] == [{'id': 'existing.widget'}]
     assert restored['bar']['layout']['center'] == [{'id': 'custom.workspaces'}]
     assert not (shell_dir / 'plugins/bvos.bar').exists()
+    assert not (hypr / 'bvos-titlebars.lua').exists()
+    assert (hypr / 'hyprland.lua').read_text().strip() == original_config.strip()
     assert user_shell.read_text() == '[font]\nbase-size = 14\n'
 print('Installer preserves settings, restores workspace numbers, retains unlocks, and restores the previous bar on uninstall.')
