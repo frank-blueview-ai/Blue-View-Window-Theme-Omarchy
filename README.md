@@ -140,6 +140,31 @@ A ◐ button on the left of the Hyprbars title bar opens an opacity control for 
 
 The user settings are kept under `~/.local/state/bvos/`. Hyprland overrides are stored in `~/.config/hypr/bvos-appearance.lua`, `bvos-opacity-apps.lua`, and `bvos-bar-glass.lua`; the installer creates them only if absent and keeps them on uninstall. Bar color and alpha overrides are kept in `~/.config/omarchy/shell.toml`. Some apps or window rules may override the desktop defaults. Window transparency affects all pixels in application windows, including their text; the Blue View window's separate opacity slider only affects its background.
 
+### Restore the application window controls
+
+If **Square** or **Rounded** stops changing window corners after a Hyprland config rewrite, check that `~/.config/hypr/hyprland.lua` still loads Blue View's saved appearance. A missing include lets the panel save changes while Hyprland continues using its existing defaults. The same include applies the **Application opacity** setting.
+
+If `~/.config/hypr/bvos-settings.lua` is installed, restore `require("hypr.bvos-settings")` after your other appearance settings. That module loads `hypr.bvos-appearance`. If your setup only has the generated `~/.config/hypr/bvos-appearance.lua`, add `require("hypr.bvos-appearance")` there instead. Back up `hyprland.lua` before editing it, then run:
+
+```bash
+hyprctl reload
+hyprctl configerrors
+```
+
+Try both buttons and check the active radius with `hyprctl getoption decoration:rounding`. Blue View uses 0 for **Square** and 12 for **Rounded**.
+
 The **Open BlueView Desktop** action expects the optional `~/.local/bin/bvos-desktop` launcher. The settings window itself does not require that separate app.
 
 Run `python3 tests/install_smoke.py` to exercise installation twice in a temporary home without changing the desktop. The test stubs plugin builds, Omarchy commands, and font downloads; it does not replace graphical testing.
+
+### Use Omawrite as your default editor
+
+With Omawrite installed, set it as your Omarchy editor and as the desktop app for plain-text and Markdown files:
+
+```bash
+mkdir -p ~/.local/state/omarchy/defaults
+printf '%s\n' omawrite > ~/.local/state/omarchy/defaults/editor
+xdg-mime default omawrite.desktop text/plain text/markdown text/x-markdown
+```
+
+Verify the Omarchy choice with `omarchy default editor` and the file associations with `xdg-mime query default` followed by each MIME type.

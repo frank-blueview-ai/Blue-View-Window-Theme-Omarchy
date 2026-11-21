@@ -65,6 +65,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert json.loads(display.read_text()) == {} and user_shell.exists()
     display.write_text('{"panelTheme":"dark"}\n')
     user_shell.write_text('[font]\nbase-size = 14\n')
+    appearance = hypr / 'bvos-appearance.lua'
+    saved_appearance = 'hl.config({ decoration = { rounding = 12 } })\n'
+    appearance.write_text(saved_appearance)
     subprocess.run(['bash', str(repo / 'install.sh'), '--no-theme'], env=env, check=True, stdout=subprocess.DEVNULL)
     assert json.loads(display.read_text())['panelTheme'] == 'dark'
     assert user_shell.read_text() == '[font]\nbase-size = 14\n'
@@ -81,6 +84,8 @@ with tempfile.TemporaryDirectory() as tmp:
     config = (hypr / 'hyprland.lua').read_text()
     assert config == first_config
     assert config.count('require("hypr.bvos-settings")') == 1
+    assert 'require("hypr.bvos-appearance")' in (hypr / 'bvos-settings.lua').read_text().splitlines()
+    assert appearance.read_text() == saved_appearance
     assert (hypr / 'bvos-titlebars.lua').is_file()
     assert (shell_dir / 'plugins/bvos.window-opacity/Service.qml').is_file()
     assert (shell_dir / 'bar/modules/bvos-desktop.qml').is_file()
