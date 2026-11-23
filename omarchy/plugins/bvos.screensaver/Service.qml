@@ -228,7 +228,7 @@ Item {
     try {
       var idle = JSON.parse(text).idle
       var seconds = idle ? Number(idle.screensaver) : NaN
-      if (seconds > 0) root.timeoutSeconds = Math.round(seconds)
+      root.timeoutSeconds = Number.isFinite(seconds) && seconds >= 0 ? Math.round(seconds) : 150
     } catch (e) {
       console.warn("bvos.screensaver: could not read shell.json: " + e)
     }
@@ -316,8 +316,8 @@ Item {
 
   IdleMonitor {
     id: idleMonitor
-    enabled: true
-    timeout: root.timeoutSeconds
+    enabled: root.timeoutSeconds > 0
+    timeout: Math.max(1, root.timeoutSeconds)
     respectInhibitors: true
     onIsIdleChanged: {
       if (isIdle) gate.running = true

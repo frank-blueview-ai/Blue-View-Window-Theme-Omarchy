@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "bvos.bar",
   "name": "Blue View Taskbar",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Blue View / Omarchy",
   "description": "Omarchy taskbar with a persistent layout lock",
   "kinds": [
@@ -13,5 +13,6 @@
   },
   "omarchy": {
     "clonedFrom": "omarchy.bar"
-  }
+  },
+  "license": "MIT"
 }

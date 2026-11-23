@@ -12,3 +12,5 @@ omarchy-shell bvos.bar-layout toggle
 The installer activates `bvos.bar`, preserves the previous bar choice for uninstall, and restores the workspace widget if it is missing. Reinstalling preserves an explicit unlocked preference and the existing layout.
 
 `Bar.qml` and `BarModel.js` derive from Omarchy commit `fb40ba2dd6a61261703a51449a2253b91ddbc339` and retain its MIT license in `LICENSE.omarchy`. They use the host's `qs.Ui` and `qs.Commons` interfaces. Rebase this clone when those interfaces change; it does not automatically inherit future stock-bar source changes. The lock additions are distributed under the same MIT license.
+
+Version 1.0.1 uses the current shell’s monitor handling and supplies the center-hover properties used by older widgets. For the taskbar alone, use the [standalone plugin](https://github.com/frank-blueview-ai/omarchy-lockable-taskbar). Both packages use the same plugin ID.

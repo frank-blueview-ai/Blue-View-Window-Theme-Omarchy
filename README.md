@@ -36,7 +36,9 @@ astronomy, real weather and real wind.
 
 A fixed padlock at the start of the taskbar protects workspace numbers and other widgets from accidental dragging or removal. It starts locked; click to unlock rearranging, then click again to lock. The setting survives restarts, and the padlock cannot itself be dragged away. Ordinary widget clicks, scrolling, and panels continue to work.
 
-Installation preserves your layout, restores workspace numbers if missing, and remembers your previous bar for uninstall. Reinstalling keeps an explicit unlocked setting. See [taskbar details](omarchy/plugins/bvos.bar/README.md).
+Installation preserves your layout, restores workspace numbers if missing, and remembers your previous bar for uninstall. Reinstalling keeps an explicit unlocked setting. The taskbar also installs independently. [Taskbar details](omarchy/plugins/bvos.bar/README.md) · [Standalone taskbar](https://github.com/frank-blueview-ai/omarchy-lockable-taskbar)
+
+The separate Power Settings plugin provides lid-close controls and independent AC and battery sleep timers. The bundled screensaver honors its **Never** setting. [Blue View Power Settings](https://github.com/frank-blueview-ai/omarchy-power-settings)
 
 ### Blue View OS theme
 - Brand navy glass, with the logo's blue (`#38b6ff`) and yellow (`#ffde59`) as accents.

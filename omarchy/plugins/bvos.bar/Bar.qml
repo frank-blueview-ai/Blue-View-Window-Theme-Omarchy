@@ -252,7 +252,13 @@ Item {
 
   Component {
     id: pluginBarApiComponent
-    PluginBarApi { }
+    PluginBarApi {
+      readonly property bool centerSectionRevealHeld: root.centerSectionRevealHeld
+      readonly property bool centerHoverRevealSuppressed: root.centerHoverRevealSuppressed
+      function setCenterHoverRevealSuppressed(value) {
+        root.setCenterHoverRevealSuppressed(value)
+      }
+    }
   }
 
   function publicLayoutConfig() {
@@ -271,8 +277,6 @@ Item {
     api.barSize = Qt.binding(function() { return root.barSize })
     api.transparent = Qt.binding(function() { return root.transparent })
     api.foregroundAnimationEnabled = Qt.binding(function() { return root.foregroundAnimationEnabled })
-    api.centerSectionRevealHeld = Qt.binding(function() { return root.centerSectionRevealHeld })
-    api._centerHoverRevealSuppressed = Qt.binding(function() { return root.centerHoverRevealSuppressed })
     api.traySectionDragActive = Qt.binding(function() { return root.traySectionDragActive })
     api.traySectionPopoutOpen = Qt.binding(function() { return root.traySectionPopoutOpen })
     root.syncPluginBarApiObjects(api)
@@ -416,10 +420,7 @@ Item {
         return String(requestedId || "") === String(moduleName || "")
           ? root.moduleWidgets(moduleName) : []
       },
-      _run: function(command) { root.run(command) },
-      _setCenterHoverRevealSuppressed: function(value) {
-        root.centerHoverRevealSuppressed = !!value
-      }
+      _run: function(command) { root.run(command) }
     })
     if (!api) return null
     root.bindPluginBarApi(api)
