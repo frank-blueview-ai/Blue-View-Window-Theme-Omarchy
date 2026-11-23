@@ -17,7 +17,7 @@ step() { printf '\n\033[1;34m==>\033[0m %s\n' "$*"; }
 backup() { [[ -e $1 ]] && cp "$1" "$1.bak.$(date +%s)"; return 0; }
 
 command -v omarchy >/dev/null || { echo "Blue View OS desktop needs Omarchy (https://omarchy.org)." >&2; exit 1; }
-for tool in jq curl git make g++ pkg-config hyprctl; do
+for tool in jq curl git make g++ pkg-config hyprctl python3; do
   command -v "$tool" >/dev/null || { echo "Missing required tool: $tool" >&2; exit 1; }
 done
 [[ -f /usr/include/hyprland/src/version.h ]] || { echo "Hyprland headers not found in /usr/include/hyprland." >&2; exit 1; }
@@ -80,7 +80,11 @@ done
 if ! grep -Fq 'require("hypr.bvos-settings")' "$hypr_config"; then
   printf '\n-- Blue View settings and appearance.\nrequire("hypr.bvos-settings")\n' >>"$hypr_config"
 fi
-install -Dm644 "$SRC/omarchy/bar/modules/bvos-desktop.qml" "$HOME/.config/omarchy/bar/modules/bvos-desktop.qml"
+panel="$HOME/.config/omarchy/bar/modules/bvos-desktop.qml"
+if ! cmp -s "$SRC/omarchy/bar/modules/bvos-desktop.qml" "$panel"; then
+  backup "$panel"
+fi
+install -Dm644 "$SRC/omarchy/bar/modules/bvos-desktop.qml" "$panel"
 install -Dm644 "$SRC/omarchy/bar/assets/blueview-ovals.svg" "$HOME/.config/omarchy/bar/assets/blueview-ovals.svg"
 install -Dm644 "$SRC/omarchy/bar/assets/blueview-glass-polished.svg" "$HOME/.config/omarchy/bar/assets/blueview-glass-polished.svg"
 mkdir -p "$HOME/.config/omarchy/plugins/bvos.window-opacity"
@@ -185,6 +189,6 @@ Blue View OS desktop is installed.
   Minimized tray   SUPER + M
   Snap windows     drag to an edge (half), the top (maximize) or a corner (quarter)
   Screensaver      starts after idle.screensaver seconds (~/.config/omarchy/shell.json)
-  Live desktop     omarchy-shell bvos-screensaver desktop <on|off>
+  Background       Blue View settings → Desktop background
   Preview it       omarchy-shell bvos-screensaver preview live now
 DONE

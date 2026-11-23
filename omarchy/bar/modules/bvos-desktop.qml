@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Window
+import QtQuick.Dialogs
 import QtQuick.Controls as Controls
 import Quickshell
 import Quickshell.Io
@@ -40,8 +41,42 @@ Panel {
   readonly property color lineColor: darkPanel ? "#4d5f4a" : "#b9b8ae"
   readonly property string home: Quickshell.env("HOME")
 
-  function refresh() { desktopStatus.running = true; linesStatus.running = true; appearanceStatus.running = true; barStatus.running = true; config.reload(); displayConfig.reload(); locationConfig.reload() }
-  onOpenedChanged: if (opened) refresh()
+  readonly property string backgroundTool: home + "/.config/omarchy/plugins/bvos.screensaver/desktop-background.py"
+  property string backgroundChoice: ""
+  property url wallpaperDraft: ""
+  property url currentWallpaper: ""
+  property url themeWallpapers: ""
+  property string currentColor: ""
+  readonly property string activeBackground: desktopEnabled ? "sky" : (currentColor ? "color" : "wallpaper")
+  readonly property string backgroundMode: backgroundChoice || activeBackground
+  readonly property bool applyingSetting: action.running || actionQueue.length > 0
+
+  function refresh() { desktopStatus.running = true; backgroundStatus.running = true; linesStatus.running = true; appearanceStatus.running = true; barStatus.running = true; config.reload(); displayConfig.reload(); locationConfig.reload() }
+  onOpenedChanged: {
+    if (opened) {
+      backgroundChoice = ""
+      wallpaperDraft = ""
+      colorInput.text = ""
+      refresh()
+    }
+  }
+
+  Process {
+    id: backgroundStatus
+    command: ["python3", root.backgroundTool, "status"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const status = JSON.parse(text)
+          root.currentWallpaper = status.wallpaper
+          root.currentColor = status.color
+          root.themeWallpapers = status.themeFolder
+        } catch (error) {
+          root.message = "Could not read desktop background settings"
+        }
+      }
+    }
+  }
   Process {
     id: barStatus
     command: ["python3", root.home + "/.config/omarchy/plugins/bvos.screensaver/bar-appearance.py", "status"]
@@ -217,6 +252,17 @@ Panel {
   }
   Window {
     id: panel
+    FileDialog {
+      id: wallpaperPicker
+      title: "Choose a desktop wallpaper"
+      nameFilters: ["Images (*.jpg *.jpeg *.png *.gif *.bmp *.webp)"]
+      onAccepted: root.wallpaperDraft = selectedFile
+    }
+    ColorDialog {
+      id: colorPicker
+      title: "Choose a desktop color"
+      onAccepted: colorInput.text = selectedColor.toString()
+    }
     title: "Blue View"
     visible: root.opened
     width: Style.space(390)
@@ -226,6 +272,7 @@ Panel {
     color: "transparent"
     onClosing: root.close()
     PanelKeyCatcher {
+      blocked: colorInput.activeFocus || wallpaperPicker.visible || colorPicker.visible
       anchors.fill: parent
       Rectangle {
         anchors.fill: parent
@@ -300,14 +347,147 @@ Panel {
           onClicked: { root.close(); Quickshell.execDetached(["omarchy-shell", "omarchy.weather", "edit"]) }
         }
         Text { textFormat: Text.PlainText; width: parent.width; wrapMode: Text.WordWrap; text: "Location is shared with Omarchy Weather."; color: root.textColor; font.pixelSize: Style.font.caption }
-        BrandToggle {
-          id: desktopToggle
+        Column {
           width: parent.width
-          tooltipText: "Turn the animated desktop sky on or off"
-          label: "Live desktop"
-          description: "Show the animated sky on the desktop"
-          checked: root.desktopEnabled
-          onClicked: root.run(["omarchy-shell", "bvos-screensaver", "desktop", root.desktopEnabled ? "off" : "on"])
+          spacing: Style.space(6)
+
+          Text {
+            text: "Desktop background"
+            color: root.textColor
+            font.pixelSize: Style.font.body
+            font.bold: true
+          }
+          Row {
+            width: parent.width
+            spacing: Style.space(4)
+            Repeater {
+              model: [
+                {label: "Live Sky", value: "sky"},
+                {label: "Wallpaper", value: "wallpaper"},
+                {label: "Solid Color", value: "color"}
+              ]
+              BrandButton {
+                required property var modelData
+                width: (parent.width - 2 * parent.spacing) / 3
+                text: modelData.label
+                selected: root.backgroundMode === modelData.value
+                focusable: true
+                onClicked: root.backgroundChoice = modelData.value
+              }
+            }
+          }
+
+          Column {
+            width: parent.width
+            spacing: Style.space(6)
+            visible: root.backgroundMode === "wallpaper"
+
+            Image {
+              id: wallpaperPreview
+              width: parent.width
+              height: visible ? Style.space(110) : 0
+              visible: status === Image.Ready
+              source: root.wallpaperDraft.toString() ? root.wallpaperDraft : root.currentWallpaper
+              sourceSize.width: 720
+              sourceSize.height: 440
+              fillMode: Image.PreserveAspectFit
+              asynchronous: true
+            }
+            Text {
+              visible: wallpaperPreview.status === Image.Error
+              text: "This image could not be opened."
+              color: root.textColor
+              font.pixelSize: Style.font.caption
+            }
+            Row {
+              width: parent.width
+              spacing: Style.space(4)
+              BrandButton {
+                width: (parent.width - parent.spacing) / 2
+                text: "Theme wallpapers…"
+                focusable: true
+                onClicked: {
+                  wallpaperPicker.currentFolder = root.themeWallpapers
+                  wallpaperPicker.open()
+                }
+              }
+              BrandButton {
+                width: (parent.width - parent.spacing) / 2
+                text: "Choose image…"
+                focusable: true
+                onClicked: {
+                  wallpaperPicker.currentFolder = "file://" + root.home
+                  wallpaperPicker.open()
+                }
+              }
+            }
+          }
+
+          Row {
+            width: parent.width
+            visible: root.backgroundMode === "color"
+            spacing: Style.space(6)
+
+            Rectangle {
+              width: Style.space(32)
+              height: colorInput.height
+              radius: Style.space(5)
+              border.color: root.lineColor
+              color: colorInput.validColor ? colorInput.effectiveColor : root.surfaceColor
+            }
+            Controls.TextField {
+              id: colorInput
+              readonly property string effectiveColor: text || root.currentColor || "#243447"
+              readonly property bool validColor: /^#[a-fA-F0-9]{6}$/.test(effectiveColor)
+              width: Style.space(105)
+              height: Style.space(32)
+              maximumLength: 7
+              color: root.textColor
+              placeholderText: root.currentColor || "#243447"
+              placeholderTextColor: root.secondaryColor
+              Accessible.name: "Hex color"
+              background: Rectangle {
+                color: root.surfaceColor
+                radius: Style.space(5)
+                border.color: colorInput.activeFocus ? root.accentColor : root.lineColor
+              }
+            }
+            BrandButton {
+              text: "Pick color…"
+              focusable: true
+              onClicked: {
+                colorPicker.selectedColor = colorInput.validColor ? colorInput.effectiveColor : "#243447"
+                colorPicker.open()
+              }
+            }
+          }
+
+          BrandButton {
+            width: parent.width
+            text: "Apply background"
+            bordered: true
+            focusable: enabled
+            opacity: enabled ? 1 : 0.6
+            enabled: !root.applyingSetting && (
+              root.backgroundMode === "sky" ||
+              (root.backgroundMode === "color" && colorInput.validColor) ||
+              (root.backgroundMode === "wallpaper" && wallpaperPreview.status === Image.Ready)
+            )
+            onClicked: {
+              if (root.backgroundMode === "sky") {
+                root.run(["omarchy-shell", "bvos-screensaver", "desktop", "on"])
+              } else if (root.backgroundMode === "wallpaper") {
+                root.run(["python3", root.backgroundTool, "wallpaper", wallpaperPreview.source.toString()])
+              } else {
+                root.run(["python3", root.backgroundTool, "color", colorInput.effectiveColor])
+              }
+            }
+          }
+          Text {
+            text: root.desktopEnabled ? "Active: Live Sky" : root.currentColor ? "Active: " + root.currentColor : "Active: Wallpaper"
+            color: root.secondaryColor
+            font.pixelSize: Style.font.caption
+          }
         }
         BrandToggle {
           id: linesToggle

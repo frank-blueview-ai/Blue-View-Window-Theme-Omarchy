@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "bvos.screensaver",
+  "name": "Blue View Desktop & Screensaver",
+  "version": "1.1.0",
+  "author": "The Blue View Group Corporation",
+  "description": "Live sky and screensaver, with wallpaper and solid-color controls in the Blue View settings panel.",
+  "kinds": [
+    "service"
+  ],
+  "entryPoints": {
+    "service": "omarchy/plugins/bvos.screensaver/Service.qml"
+  }
+}

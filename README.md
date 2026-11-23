@@ -44,7 +44,7 @@ Installation preserves your layout, restores workspace numbers if missing, and r
 - Three wallpapers rendered from the screensaver sky: day, golden hour and night.
 
 ### A real sky, above the clouds
-The same living sky is your desktop background and your screensaver. It's dark on screen when it's dark outside.
+Use the living sky as your screensaver and optionally as your desktop background. Choose Live Sky, an image, or a solid color in [Desktop background](#desktop-background).
 
 - **The sun and moon are the logo's ovals,** placed where they really are in your sky. Positions come from standard ephemeris formulas (Meeus) for your latitude, longitude and time, including atmospheric refraction near the horizon. The moon shows its real phase.
 - **Real stars.** The 2,887 naked-eye stars of the Yale Bright Star Catalogue are precessed to today, placed by local sidereal time, and colored by their B-V index. They come out in order of brightness as twilight deepens, turn with the Earth, and hide behind moonlight, overcast and daylight. Constellation lines are optional and off by default.
@@ -66,7 +66,7 @@ See [windows/README.md](windows/README.md).
 ## Requirements
 
 - Omarchy with Hyprland 0.55 or newer (Lua config)
-- `jq`, `curl`, `git`, `make`, `g++`, `pkg-config`: all present on a standard Omarchy install
+- `jq`, `curl`, `git`, `make`, `g++`, `pkg-config`, `python3`: all present on a standard Omarchy install
 - `qt6-shadertools` (optional): if it's installed, the shader is recompiled locally
 
 ## Install
@@ -77,7 +77,9 @@ cd Blue-View-Window-Theme-Omarchy
 ./install.sh            # or ./install.sh --no-theme to keep your current theme
 ```
 
-The script backs up `hyprland.lua` and `shell.json` before editing them.
+Blue View uses a manual installer. Running it builds the native Hyprland plugins, installs the Blue View theme and settings panel, updates your bar layout, and enables the screensaver. The script backs up `hyprland.lua` and `shell.json` before editing them and backs up a changed Blue View panel before replacing it.
+
+To update an existing checkout, run `git pull --ff-only` and then `./install.sh --no-theme` to keep your current theme. If Blue View still shows the old **Live desktop** toggle after updating, run `omarchy restart shell` and reopen Blue View from the bar.
 
 ## Use
 
@@ -134,11 +136,25 @@ Licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use,
 
 ## Blue View settings and window opacity
 
-The installer adds the Blue View icon to the Omarchy bar. Click it to open the movable settings window. It controls the live desktop, screensaver, sky time, clock format, Blue View window transparency, desktop window corners and opacity, and taskbar background opacity and monochrome icon/text color. The location is shared with Omarchy Weather. The icon and settings window follow the Blue View light/dark setting.
+The installer adds the Blue View icon to the Omarchy bar. Click it to open the movable settings window. It controls the desktop background, screensaver, sky time, clock format, Blue View window transparency, desktop window corners and opacity, and taskbar background opacity and monochrome icon/text color. The location is shared with Omarchy Weather. The icon and settings window follow the Blue View light/dark setting.
 
 A ◐ button on the left of the Hyprbars title bar opens an opacity control for that window. Changes normally last for the life of the window; choose **Remember for this application** to apply that opacity to future windows of the same application. **Reset to desktop default** removes the saved application preference and returns that window to the desktop opacity. The control window stays opaque so that it is usable even when the desktop default is very transparent. Shared Quickshell windows cannot have an application-wide saved override.
 
 The user settings are kept under `~/.local/state/bvos/`. Hyprland overrides are stored in `~/.config/hypr/bvos-appearance.lua`, `bvos-opacity-apps.lua`, and `bvos-bar-glass.lua`; the installer creates them only if absent and keeps them on uninstall. Bar color and alpha overrides are kept in `~/.config/omarchy/shell.toml`. Some apps or window rules may override the desktop defaults. Window transparency affects all pixels in application windows, including their text; the Blue View window's separate opacity slider only affects its background.
+
+### Desktop background
+
+Click the **Blue View** icon in the bar and find **Desktop background** below **Location**.
+
+| Mode | How to use it |
+| --- | --- |
+| **Live Sky** | Select **Live Sky**, then **Apply background** to show the animated sky. |
+| **Wallpaper** | Select **Theme wallpapers…** for bundled images or **Choose image…** for a local JPEG, PNG, GIF, BMP, or WebP. Check the preview, then select **Apply background**. |
+| **Solid Color** | Select **Pick color…** or enter a six-digit hex color such as `#243447`. Check the swatch, then select **Apply background**. |
+
+Wallpaper and solid color turn off the animated desktop once Omarchy applies the selection. The screensaver has its own settings. Switching back to Live Sky keeps the Omarchy background underneath. Omarchy manages the active image when you switch themes or cycle wallpapers.
+
+Imported images are copied to `~/.config/omarchy/backgrounds/<theme-slug>/`. Solid colors are saved as PNGs under `~/.local/state/bvos/backgrounds/`. Both paths let Omarchy keep the selected background across shell restarts.
 
 ### Restore the application window controls
 
